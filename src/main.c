@@ -22,6 +22,7 @@ The authors of this program may be contacted at https://forum.princed.org
 
 #ifdef __PS2__
 #include <debug.h>
+#include <delaythread.h>
 #include <iopcontrol.h>
 #include <kernel.h>
 #include <sifrpc.h>
