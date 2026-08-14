@@ -2,7 +2,8 @@ name: Build PlayStation 2
 
 on:
   push:
-  pull_request:
+    branches:
+      - ps2
   workflow_dispatch:
 
 permissions:
