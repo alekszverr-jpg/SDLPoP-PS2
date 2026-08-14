@@ -57,6 +57,13 @@ extern "C" {
 #endif
 
 #include "config.h"
+
+#ifdef __PS2__
+void ps2_boot_log(const char* format, ...);
+void ps2_boot_fatal(const char* message);
+#else
+#define ps2_boot_log(...) ((void)0)
+#endif
 #include "types.h"
 #include "proto.h"
 #include "data.h"

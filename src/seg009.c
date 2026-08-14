@@ -2587,13 +2587,18 @@ void init_scaling(void) {
 
 // seg009:38ED
 void set_gr_mode(byte grmode) {
+	ps2_boot_log("set_gr_mode: entered");
 #ifdef SDL_HINT_WINDOWS_DISABLE_THREAD_NAMING
 	SDL_SetHint(SDL_HINT_WINDOWS_DISABLE_THREAD_NAMING, "1");
 #endif
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_NOPARACHUTE | SDL_INIT_GAMECONTROLLER) != 0) {
 		sdlperror("set_gr_mode: SDL_Init");
+#ifdef __PS2__
+		ps2_boot_fatal(SDL_GetError());
+#endif
 		quit(1);
 	}
+	ps2_boot_log("set_gr_mode: SDL_Init succeeded");
 #ifndef __PS2__
 	if (enable_controller_rumble) {
 		if (SDL_InitSubSystem(SDL_INIT_HAPTIC) != 0) {
@@ -2634,6 +2639,13 @@ void set_gr_mode(byte grmode) {
 	window_ = SDL_CreateWindow(WINDOW_TITLE,
 	                           SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 	                           pop_window_width, pop_window_height, flags);
+	if (window_ == NULL) {
+#ifdef __PS2__
+		ps2_boot_fatal(SDL_GetError());
+#endif
+		quit(1);
+	}
+	ps2_boot_log("set_gr_mode: SDL window created");
 	// Make absolutely sure that VSync will be off, to prevent timer issues.
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
 	flags = 0;
@@ -2645,6 +2657,13 @@ void set_gr_mode(byte grmode) {
 		default: break;
 	}
 	renderer_ = SDL_CreateRenderer(window_, -1 , flags | SDL_RENDERER_TARGETTEXTURE);
+	if (renderer_ == NULL) {
+#ifdef __PS2__
+		ps2_boot_fatal(SDL_GetError());
+#endif
+		quit(1);
+	}
+	ps2_boot_log("set_gr_mode: SDL renderer created");
 	SDL_RendererInfo renderer_info;
 	if (SDL_GetRendererInfo(renderer_, &renderer_info) == 0) {
 		if (renderer_info.flags & SDL_RENDERER_TARGETTEXTURE) {
@@ -2682,6 +2701,7 @@ void set_gr_mode(byte grmode) {
 	}
 	init_overlay();
 	init_scaling();
+	ps2_boot_log("set_gr_mode: surfaces and scaling initialized");
 	if (start_fullscreen) {
 		SDL_ShowCursor(SDL_DISABLE);
 	}

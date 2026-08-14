@@ -129,6 +129,7 @@ if(PS2)
         SDL2_image::SDL2_image-static
         SDL2::SDL2main
         SDL2::SDL2-static
+        debug
         m
     )
 elseif(WIN32)

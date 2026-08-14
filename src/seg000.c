@@ -36,6 +36,7 @@ void fix_sound_priorities(void);
 
 // seg000:0000
 void pop_main() {
+	ps2_boot_log("pop_main: entered");
 	if (check_param("--version") || check_param("-v")) {
 		printf ("SDLPoP v%s\n", SDLPOP_VERSION);
 		exit(0);
@@ -62,6 +63,7 @@ void pop_main() {
 #endif
 
 	load_global_options();
+	ps2_boot_log("pop_main: global options loaded");
 	check_mod_param();
 #ifdef USE_MENU
 	load_ingame_settings();
@@ -86,7 +88,9 @@ void pop_main() {
 #endif
 
 	// Initialize everything before load_mod_options() so it can show an error dialog if needed.
+	ps2_boot_log("pop_main: initializing SDL video");
 	/*video_mode =*/ parse_grmode();
+	ps2_boot_log("pop_main: SDL video initialized");
 	current_target_surface = rect_sthg(onscreen_surface_, &screen_rect);
 	set_hc_pal();
 	init_copyprot_dialog();
@@ -121,6 +125,7 @@ void pop_main() {
 
 	// I moved this after init_copyprot_dialog(), so open_dat() can show an error dialog if needed.
 	dathandle = open_dat("PRINCE.DAT", 'G');
+	ps2_boot_log("pop_main: PRINCE data opened (%s)", dathandle != NULL ? "yes" : "no");
 
 	if (cheats_enabled
 		#ifdef USE_REPLAY
@@ -153,6 +158,7 @@ byte* level_var_palettes;
 
 // seg000:024F
 void init_game_main() {
+	ps2_boot_log("init_game_main: entered");
 	doorlink1_ad = /*&*/level.doorlinks1;
 	doorlink2_ad = /*&*/level.doorlinks2;
 	prandom(1);
@@ -176,9 +182,11 @@ void init_game_main() {
 	init_lighting();
 #endif
 	load_all_sounds();
+	ps2_boot_log("init_game_main: graphics and sounds loaded");
 
 	hof_read();
 	show_splash(); // added
+	ps2_boot_log("init_game_main: splash completed, starting game");
 	start_game();
 }
 
