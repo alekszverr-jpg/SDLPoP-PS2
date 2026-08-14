@@ -1,0 +1,102 @@
+name: Build PlayStation 2
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ps2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PS2DEV: /tmp/ps2dev
+      PS2SDK: /tmp/ps2dev/ps2sdk
+      GSKIT: /tmp/ps2dev/gsKit
+
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v5
+
+      - name: Install PS2DEV v2.0.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$PS2DEV"
+          curl --fail --location --retry 3 \
+            https://github.com/ps2dev/ps2dev/releases/download/v2.0.0/ps2dev-ubuntu-latest.tar.gz \
+            --output /tmp/ps2dev.tar.gz
+          tar -xzf /tmp/ps2dev.tar.gz --strip-components=1 -C "$PS2DEV"
+          printf '%s\n' "$PS2DEV/bin" "$PS2DEV/ee/bin" "$PS2DEV/iop/bin" "$PS2DEV/dvp/bin" >> "$GITHUB_PATH"
+
+      - name: Build and install SDL2 for PS2
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch release-2.32.10 https://github.com/libsdl-org/SDL.git /tmp/SDL2
+          cmake -S /tmp/SDL2 -B /tmp/SDL2-build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$PS2DEV/share/ps2dev.cmake" \
+            -DCMAKE_INSTALL_PREFIX="$PS2SDK/ports" \
+            -DSDL_SHARED=OFF \
+            -DSDL_STATIC=ON \
+            -DSDL_TEST=OFF
+          cmake --build /tmp/SDL2-build --parallel 2
+          cmake --install /tmp/SDL2-build
+
+      - name: Build and install SDL2_image for PS2
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --recursive --branch release-2.8.12 https://github.com/libsdl-org/SDL_image.git /tmp/SDL2_image
+          cmake -S /tmp/SDL2_image -B /tmp/SDL2_image-build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$PS2DEV/share/ps2dev.cmake" \
+            -DCMAKE_PREFIX_PATH="$PS2SDK/ports" \
+            -DCMAKE_INSTALL_PREFIX="$PS2SDK/ports" \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=OFF \
+            -DSDL2IMAGE_INSTALL=ON \
+            -DSDL2IMAGE_VENDORED=ON \
+            -DSDL2IMAGE_DEPS_SHARED=OFF \
+            -DSDL2IMAGE_BACKEND_STB=ON \
+            -DSDL2IMAGE_SAMPLES=OFF \
+            -DSDL2IMAGE_TESTS=OFF \
+            -DSDL2IMAGE_AVIF=OFF \
+            -DSDL2IMAGE_JXL=OFF \
+            -DSDL2IMAGE_TIF=OFF \
+            -DSDL2IMAGE_WEBP=OFF
+          cmake --build /tmp/SDL2_image-build --parallel 2
+          cmake --install /tmp/SDL2_image-build
+
+      - name: Build SDLPoP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S src -B build-ps2 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$PS2DEV/share/ps2dev.cmake" \
+            -DCMAKE_PREFIX_PATH="$PS2SDK/ports"
+          cmake --build build-ps2 --parallel 2
+          test -s BOOT.ELF
+
+      - name: Package PS2 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/SDLPoP-PS2
+          cp BOOT.ELF SDLPoP.ini README.PS2.md dist/SDLPoP-PS2/
+          cp -R data dist/SDLPoP-PS2/data
+          (cd dist && cmake -E tar cf SDLPoP-PS2.zip --format=zip SDLPoP-PS2)
+
+      - name: Upload PS2 ELF and data
+        uses: actions/upload-artifact@v6
+        with:
+          name: SDLPoP-PS2
+          path: |
+            dist/SDLPoP-PS2.zip
+            dist/SDLPoP-PS2/BOOT.ELF
+          if-no-files-found: error

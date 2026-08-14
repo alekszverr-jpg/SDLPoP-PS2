@@ -60,6 +60,8 @@ src/*_private.*
 src/.idea/
 src/cmake-build*/
 build/
+build-ps2/
+dist/
 
 # Visual Studio
 .vs/

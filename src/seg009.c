@@ -53,7 +53,13 @@ bool found_share_dir = false;
 
 void find_exe_dir(void) {
 	if (found_exe_dir) return;
-#ifdef __amigaos4__
+#ifdef __PS2__
+	// SDL2's PS2 startup wrapper waits for the launch device and leaves the
+	// process in the ELF directory. argv[0] is not reliable for all launchers.
+	if (getcwd(exe_dir, sizeof(exe_dir)) == NULL) {
+		snprintf_check(exe_dir, sizeof(exe_dir), ".");
+	}
+#elif defined(__amigaos4__)
 	if(g_argc == 0) { // from Workbench
 		struct WBStartup *WBenchMsg = (struct WBStartup *)g_argv;
 		NameFromLock( WBenchMsg->sm_ArgList->wa_Lock, exe_dir, sizeof(exe_dir) );
@@ -80,17 +86,30 @@ void find_exe_dir(void) {
 #if ! (defined WIN32 || _WIN32 || WIN64 || _WIN64)
 void find_home_dir(void) {
 	if (found_home_dir) return;
+#ifdef __PS2__
+	// PS2 has no HOME. SDL2 starts in the directory containing the ELF.
+	find_exe_dir();
+	snprintf_check(home_dir, sizeof(home_dir), "%s", exe_dir);
+	found_home_dir = true;
+#else
 	const char* home_path = getenv("HOME");
 	snprintf_check(home_dir, POP_MAX_PATH - 1, "%s/.%s", home_path, POP_DIR_NAME);
 	if(file_exists(home_dir))
 		found_home_dir = true;
+#endif
 }
 
 void find_share_dir(void) {
 	if (found_share_dir) return;
+#ifdef __PS2__
+	find_exe_dir();
+	snprintf_check(share_dir, sizeof(share_dir), "%s", exe_dir);
+	found_share_dir = true;
+#else
 	snprintf_check(share_dir, POP_MAX_PATH - 1, "%s/%s", SHARE_PATH, POP_DIR_NAME);
 	if(file_exists(share_dir))
 		found_share_dir = true;
+#endif
 }
 #endif
 
@@ -975,12 +994,17 @@ int set_joy_mode() {
 			using_sdl_joystick_interface = 1;
 		}
 	}
+#ifdef __PS2__
+	// PS2 rumble is exposed through SDL_JoystickRumble, not Haptic.
+	sdl_haptic = NULL;
+#else
 	if (enable_controller_rumble && is_joyst_mode) {
 		sdl_haptic = SDL_HapticOpen(0);
 		SDL_HapticRumbleInit(sdl_haptic); // initialize the device for simple rumble
 	} else {
 		sdl_haptic = NULL;
 	}
+#endif
 
 	is_keyboard_mode = !is_joyst_mode;
 	return is_joyst_mode;
@@ -2564,11 +2588,13 @@ void set_gr_mode(byte grmode) {
 		sdlperror("set_gr_mode: SDL_Init");
 		quit(1);
 	}
+#ifndef __PS2__
 	if (enable_controller_rumble) {
 		if (SDL_InitSubSystem(SDL_INIT_HAPTIC) != 0) {
 			printf("Warning: Haptic subsystem unavailable, ignoring enable_controller_rumble = true\n");
 		}
 	}
+#endif
 
 	//SDL_EnableUNICODE(1); //deprecated
 	Uint32 flags = 0;
@@ -3677,12 +3703,47 @@ void process_events() {
 				}
 #endif
 				if (event.type == SDL_JOYBUTTONDOWN) {
+#ifdef __PS2__
+					// SDL's PS2 backend exposes libpad bit positions as joystick
+					// buttons: Select, L3, R3, Start, Up, Right, Down, Left,
+					// L2, R2, L1, R1, Triangle, Circle, Cross, Square.
+					switch (event.jbutton.button) {
+						case 0: joy_button_states[JOYINPUT_BACK] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; last_key_scancode = SDL_SCANCODE_BACKSPACE; break;
+						case 3: joy_button_states[JOYINPUT_START] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; last_key_scancode = SDL_SCANCODE_BACKSPACE; break;
+						case 4: joy_button_states[JOYINPUT_DPAD_UP] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break;
+						case 5: joy_button_states[JOYINPUT_DPAD_RIGHT] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break;
+						case 6: joy_button_states[JOYINPUT_DPAD_DOWN] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break;
+						case 7: joy_button_states[JOYINPUT_DPAD_LEFT] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break;
+						case 11:
+						case 15: joy_button_states[JOYINPUT_X] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; // R1/Square: action
+						case 12: joy_button_states[JOYINPUT_Y] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; // Triangle: up
+						case 14: joy_button_states[JOYINPUT_A] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; // Cross: down
+						default: break;
+					}
+#else
 					if      (event.jbutton.button == SDL_JOYSTICK_BUTTON_Y)   joy_button_states[JOYINPUT_Y] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; // Y (up)
 					else if (event.jbutton.button == SDL_JOYSTICK_BUTTON_X)   joy_button_states[JOYINPUT_X] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW;    // X (Shift)
+#endif
 				}
 				else if (event.type == SDL_JOYBUTTONUP) {
+#ifdef __PS2__
+					switch (event.jbutton.button) {
+						case 0: joy_button_states[JOYINPUT_BACK] &= ~KEYSTATE_HELD; break;
+						case 3: joy_button_states[JOYINPUT_START] &= ~KEYSTATE_HELD; break;
+						case 4: joy_button_states[JOYINPUT_DPAD_UP] &= ~KEYSTATE_HELD; break;
+						case 5: joy_button_states[JOYINPUT_DPAD_RIGHT] &= ~KEYSTATE_HELD; break;
+						case 6: joy_button_states[JOYINPUT_DPAD_DOWN] &= ~KEYSTATE_HELD; break;
+						case 7: joy_button_states[JOYINPUT_DPAD_LEFT] &= ~KEYSTATE_HELD; break;
+						case 11:
+						case 15: joy_button_states[JOYINPUT_X] &= ~KEYSTATE_HELD; break;
+						case 12: joy_button_states[JOYINPUT_Y] &= ~KEYSTATE_HELD; break;
+						case 14: joy_button_states[JOYINPUT_A] &= ~KEYSTATE_HELD; break;
+						default: break;
+					}
+#else
 					if      (event.jbutton.button == SDL_JOYSTICK_BUTTON_Y)   joy_button_states[JOYINPUT_Y] &= ~KEYSTATE_HELD;  // Y (up)
 					else if (event.jbutton.button == SDL_JOYSTICK_BUTTON_X)   joy_button_states[JOYINPUT_X] &= ~KEYSTATE_HELD;    // X (Shift)
+#endif
 				}
 				break;
 

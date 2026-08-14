@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.16)
 project(SDLPoP)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -std=c99")
@@ -79,8 +79,11 @@ set(SOURCE_FILES
         screenshot.c
         menu.c
         stb_vorbis.c
-        icon.rc
         )
+
+if(WIN32)
+    list(APPEND SOURCE_FILES icon.rc)
+endif()
 
 if (NOT(APPLE AND CREATE_BUNDLE))
     add_executable(prince ${SOURCE_FILES})
@@ -115,7 +118,20 @@ else()
             ${CMAKE_SOURCE_DIR}/../SDLPoP.ini ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/prince.app/Contents/MacOS/SDLPoP.ini)
 endif()
 
-if(WIN32)
+if(PS2)
+    # SDL2main supplies the PS2 startup wrapper which resets the IOP and
+    # mounts the device from which BOOT.ELF was launched.
+    find_package(SDL2 CONFIG REQUIRED)
+    find_package(SDL2_image CONFIG REQUIRED)
+    set_target_properties(prince PROPERTIES OUTPUT_NAME "BOOT" SUFFIX ".ELF")
+    target_compile_options(prince PRIVATE -O2 -G0)
+    target_link_libraries(prince PRIVATE
+        SDL2_image::SDL2_image-static
+        SDL2::SDL2main
+        SDL2::SDL2-static
+        m
+    )
+elseif(WIN32)
     target_link_libraries(prince mingw32 SDL2main SDL2 SDL2_image)
 elseif(APPLE)
     target_link_libraries(prince SDL2main SDL2 SDL2_image m)
