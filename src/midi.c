@@ -55,6 +55,10 @@ static int channel_instrument[MAX_MIDI_CHANNELS];
 static int last_used_voice;
 static int num_midi_tracks;
 static parsed_midi_type parsed_midi;
+// The audio callback must not lock the audio device or free heap memory.
+// Once a song ends, cleanup is deferred until the main thread next stops or
+// starts MIDI playback.
+static volatile bool midi_cleanup_pending = false;
 static midi_track_type* midi_tracks;
 static int64_t midi_current_pos; // in MIDI ticks
 static float midi_current_pos_fract_part; // partial ticks after the decimal point
@@ -98,7 +102,7 @@ void free_parsed_midi(parsed_midi_type* parsed_midi) {
 		free(parsed_midi->tracks[i].events);
 	}
 	free(parsed_midi->tracks);
-	memset(&parsed_midi, 0, sizeof(parsed_midi));
+	memset(parsed_midi, 0, sizeof(*parsed_midi));
 }
 
 bool parse_midi(midi_raw_chunk_type* midi, parsed_midi_type* parsed_midi) {
@@ -577,10 +581,8 @@ void midi_callback(void *userdata, Uint8 *stream, int len) {
 				// All tracks have finished. Fill the remaining samples with silence and stop playback.
 				SDL_memset(stream, 0, frames_needed * 4);
 //				printf("midi_callback(): sound ended\n");
-				SDL_LockAudio();
 				midi_playing = 0;
-				free_parsed_midi(&parsed_midi);
-				SDL_UnlockAudio();
+				midi_cleanup_pending = true;
 				return;
 			} else {
 				// Need to delay (let the OPL chip do its work) until one of the tracks needs to process a MIDI event again.
@@ -608,11 +610,14 @@ void midi_callback(void *userdata, Uint8 *stream, int len) {
 
 
 void stop_midi() {
-	if (!midi_playing) return;
+	if (!midi_playing && !midi_cleanup_pending) return;
 //	SDL_PauseAudio(1);
 	SDL_LockAudio();
-	midi_playing = 0;
-	free_parsed_midi(&parsed_midi);
+	if (midi_playing || midi_cleanup_pending) {
+		midi_playing = 0;
+		free_parsed_midi(&parsed_midi);
+		midi_cleanup_pending = false;
+	}
 	SDL_UnlockAudio();
 }
 
