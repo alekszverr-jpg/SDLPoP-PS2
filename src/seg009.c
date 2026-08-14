@@ -1911,10 +1911,9 @@ int digi_remaining_length = 0;
 SDL_AudioSpec* digi_audiospec = NULL;
 // The desired samplerate. Everything will be resampled to this.
 #ifdef __PS2__
-// SPU2 runs at 48 kHz. audsrv converts 24 kHz with an exact 2x duplicate,
-// while 44.1 kHz uses a coarse lookup-table resampler. The lower rate also
-// gives the EE considerably more time to render each software OPL3 buffer.
-const int digi_samplerate = 24000;
+// Match the native SPU2 rate so audsrv does not resample the software OPL3
+// output. The PS2 SDL backend is patched to use a larger real-time buffer.
+const int digi_samplerate = 48000;
 #else
 const int digi_samplerate = 44100;
 #endif

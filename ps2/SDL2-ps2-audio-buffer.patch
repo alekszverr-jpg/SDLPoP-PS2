@@ -1,0 +1,14 @@
+diff --git a/src/audio/ps2/SDL_ps2audio.c b/src/audio/ps2/SDL_ps2audio.c
+--- a/src/audio/ps2/SDL_ps2audio.c
++++ b/src/audio/ps2/SDL_ps2audio.c
+@@ -63,7 +63,10 @@ static int PS2AUDIO_OpenDevice(_THIS, const char *devname)
+         break;
+     }
+ 
+-    this->spec.samples = 512;
++    /* Give software mixers enough time to fill the next buffer. The original
++       512-frame buffer is only 10.7 ms at the SPU2 native 48 kHz rate. */
++    this->spec.samples = 2048;
+     this->spec.channels = this->spec.channels == 1 ? 1 : 2;
+     this->spec.format = this->spec.format == AUDIO_S8 ? AUDIO_S8 : AUDIO_S16;
+ 
