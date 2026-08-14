@@ -38,7 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           git clone --depth 1 --branch release-2.32.10 https://github.com/libsdl-org/SDL.git /tmp/SDL2
-          git -C /tmp/SDL2 apply "$GITHUB_WORKSPACE/ps2/SDL2-ps2-audio-buffer.patch"
+          git -C /tmp/SDL2 apply --unidiff-zero "$GITHUB_WORKSPACE/ps2/SDL2-ps2-audio-buffer.patch"
           cmake -S /tmp/SDL2 -B /tmp/SDL2-build \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="$PS2DEV/share/ps2dev.cmake" \
