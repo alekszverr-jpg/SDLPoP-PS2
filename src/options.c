@@ -502,8 +502,18 @@ void set_options_to_default() {
 
 void load_global_options() {
 	set_options_to_default();
+#ifdef __PS2__
+	// The original INI parser performs many formatted stdio reads and the DOS
+	// customization loader scans the whole working directory for an EXE.  Both
+	// operations can stall indefinitely in ps2sdk's mass: driver on real USB
+	// hardware.  Neither is required for a stock PS2 build, so start with the
+	// built-in defaults.  PS2-specific configuration can be restored later with
+	// a buffered parser which does not issue tiny reads to mass:.
+	ps2_boot_log("load_global_options: using built-in PS2 defaults");
+#else
 	ini_load(locate_file("SDLPoP.ini"), global_ini_callback); // global configuration
 	load_dos_exe_modifications("."); // read PRINCE.EXE in the current working directory
+#endif
 }
 
 void check_mod_param() {
