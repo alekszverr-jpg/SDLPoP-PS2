@@ -511,6 +511,9 @@ static void process_midi_event(midi_event_type* event) {
 
 void midi_callback(void *userdata, Uint8 *stream, int len) {
 	if (!midi_playing || len <= 0) return;
+	// Reuse one callback-local buffer. Allocating and freeing every MIDI
+	// fragment can starve short real-time audio buffers on slower targets.
+	short* temp_buffer = alloca(len);
 	int frames_needed = len / 4;
 	while (frames_needed > 0) {
 		if (ticks_to_next_pause > 0) {
@@ -521,14 +524,13 @@ void midi_callback(void *userdata, Uint8 *stream, int len) {
 			int available_frames = (int)(((advance_us * mixing_freq) + ONE_SECOND_IN_US - 1) / ONE_SECOND_IN_US); // round up.
 			int advance_frames = MIN(available_frames, frames_needed);
 			advance_us = advance_frames * ONE_SECOND_IN_US / mixing_freq; // recalculate, in case the rounding up increased this.
-			short* temp_buffer = malloc(advance_frames * 4);
 			OPL3_GenerateStream(&opl_chip, temp_buffer, advance_frames);
 			if (is_sound_on && enable_music) {
 				for (int sample = 0; sample < advance_frames * 2; ++sample) {
-					((short*)stream)[sample] += temp_buffer[sample];
+					int mixed_sample = ((short*)stream)[sample] + temp_buffer[sample];
+					((short*)stream)[sample] = (short)MAX(-32768, MIN(mixed_sample, 32767));
 				}
 			}
-			free(temp_buffer);
 
 			frames_needed -= advance_frames;
 			stream += advance_frames * 4;
