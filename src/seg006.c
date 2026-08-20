@@ -591,14 +591,15 @@ void play_seq() {
 				}
 				// fallthrough!
 			case SEQ_JMP: // jump
-				#ifdef __PSP__
-				word command1 = (word)*(SEQTBL_0 + Char.curr_seq);
-				word command2 =  (word)*(SEQTBL_0 + Char.curr_seq+1);
-				//for some reason, this works, but normal pointer cast crashes (?)
-				Char.curr_seq = SDL_SwapLE16(command1 | (command2<<8));
-				#else
-				Char.curr_seq = SDL_SwapLE16(*(const word*)(SEQTBL_0 + Char.curr_seq));
-				#endif
+			{
+				// Sequence operands are little-endian but are not guaranteed to be
+				// aligned. A word pointer cast happens to work on x86, but raises an
+				// address exception on MIPS (PS2/PSP) when the operand starts at an
+				// odd address. Assemble the value byte by byte on every platform.
+				word command_lo = (word)*(SEQTBL_0 + Char.curr_seq);
+				word command_hi = (word)*(SEQTBL_0 + Char.curr_seq + 1);
+				Char.curr_seq = command_lo | (command_hi << 8);
+			}
 				break;
 			case SEQ_UP: // up
 				--Char.curr_row;
