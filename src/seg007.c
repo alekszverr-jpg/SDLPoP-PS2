@@ -23,10 +23,27 @@ The authors of this program may be contacted at https://forum.princed.org
 // seg007:0000
 void process_trobs() {
 	word need_delete = 0;
+	#ifdef __PS2__
+	if (ps2_trace_frame >= 0 && ps2_trace_frame < 16) {
+		ps2_boot_log("frame %d: trobs count=%d", ps2_trace_frame, trobs_count);
+	}
+	#endif
 	if (trobs_count == 0) return;
 	for (word index = 0; index < trobs_count; ++index) {
 		trob = trobs[index];
+		#ifdef __PS2__
+		if (ps2_trace_frame >= 0 && ps2_trace_frame < 16 && index < 32) {
+			ps2_boot_log("frame %d: trob %u before animate room=%d tile=%d type=%d",
+				ps2_trace_frame, index, trob.room, trob.tilepos, trob.type);
+		}
+		#endif
 		animate_tile();
+		#ifdef __PS2__
+		if (ps2_trace_frame >= 0 && ps2_trace_frame < 16 && index < 32) {
+			ps2_boot_log("frame %d: trob %u animate completed type=%d",
+				ps2_trace_frame, index, trob.type);
+		}
+		#endif
 		trobs[index].type = trob.type;
 		if (trob.type < 0) {
 			need_delete = 1;
@@ -981,11 +998,26 @@ word curmob_index;
 // seg007:1063
 void do_mobs() {
 	short n_mobs = mobs_count;
+	#ifdef __PS2__
+	if (ps2_trace_frame >= 0 && ps2_trace_frame < 16) {
+		ps2_boot_log("frame %d: mobs count=%d", ps2_trace_frame, mobs_count);
+	}
+	#endif
 	for (curmob_index = 0; n_mobs > curmob_index; ++curmob_index) {
+		#ifdef __PS2__
+		if (ps2_trace_frame >= 0 && ps2_trace_frame < 16 && curmob_index < 32) {
+			ps2_boot_log("frame %d: mob %u before move", ps2_trace_frame, curmob_index);
+		}
+		#endif
 		curmob = mobs[curmob_index];
 		move_mob();
 		check_loose_fall_on_kid();
 		mobs[curmob_index] = curmob;
+		#ifdef __PS2__
+		if (ps2_trace_frame >= 0 && ps2_trace_frame < 16 && curmob_index < 32) {
+			ps2_boot_log("frame %d: mob %u move completed", ps2_trace_frame, curmob_index);
+		}
+		#endif
 	}
 	short new_index = 0;
 	for (short index = 0; index < mobs_count; ++index) {
