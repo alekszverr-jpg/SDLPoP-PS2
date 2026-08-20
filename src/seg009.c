@@ -2005,11 +2005,6 @@ void speaker_callback(void *userdata, Uint8 *stream, int len) {
 			speaker_playing = 0;
 			current_speaker_sound = NULL;
 			speaker_note_index = 0;
-			SDL_Event event;
-			memset(&event, 0, sizeof(event));
-			event.type = SDL_USEREVENT;
-			event.user.code = userevent_SOUND;
-			SDL_PushEvent(&event);
 			return;
 		}
 
@@ -2046,31 +2041,32 @@ void play_speaker_sound(sound_buffer_type* buffer) {
 
 void digi_callback(void *userdata, Uint8 *stream, int len) {
 	// Don't go over the end of either the input or the output buffer.
-	size_t copy_len = MIN(len, digi_remaining_length);
+	size_t copy_len = (size_t)MIN(len, digi_remaining_length);
 	//printf("digi_callback(): copy_len = %d\n", copy_len);
 	//printf("digi_callback(): len = %d\n", len);
 	if (is_sound_on) {
 		// Copy the next part of the input of the output.
-		memcpy(stream, digi_remaining_pos, copy_len);
+		if (copy_len > 0) {
+			memcpy(stream, digi_remaining_pos, copy_len);
+		}
 		// In case the sound does not fill the buffer: fill the rest of the buffer with silence.
 		memset(stream + copy_len, digi_audiospec->silence, len - copy_len);
 	} else {
 		// If sound is off: Mute the sound but keep track of where we are.
 		memset(stream, digi_audiospec->silence, len);
 	}
-	// If the sound ended, push an event.
-	if (digi_playing && digi_remaining_length == 0) {
-		//printf("digi_callback(): sound ended\n");
-		SDL_Event event;
-		memset(&event, 0, sizeof(event));
-		event.type = SDL_USEREVENT;
-		event.user.code = userevent_SOUND;
-		digi_playing = 0;
-		SDL_PushEvent(&event);
-	}
 	// Advance the pointer.
 	digi_remaining_length -= copy_len;
-	digi_remaining_pos += copy_len;
+	if (digi_remaining_length > 0) {
+		digi_remaining_pos += copy_len;
+	} else {
+		// Audio callbacks run while SDL holds the audio-device lock. Do not call
+		// SDL_PushEvent (or any other potentially locking API) from here: on PS2
+		// that can deadlock the audio thread and then freeze the main thread.
+		digi_playing = 0;
+		digi_remaining_length = 0;
+		digi_remaining_pos = NULL;
+	}
 }
 
 void ogg_callback(void *userdata, Uint8 *stream, int len) {
@@ -2096,15 +2092,11 @@ void ogg_callback(void *userdata, Uint8 *stream, int len) {
 		samples_filled = stb_vorbis_get_samples_short_interleaved(ogg_decoder, output_channels,
 																  (short*) discarded_samples, len / sizeof(short));
 	}
-	// Push an event if the sound has ended.
+	// Mark completion directly. The old SDL_USEREVENT was ignored by the main
+	// thread and could deadlock the PS2 audio callback.
 	if (samples_filled == 0) {
 		//printf("ogg_callback(): sound ended\n");
-		SDL_Event event;
-		memset(&event, 0, sizeof(event));
-		event.type = SDL_USEREVENT;
-		event.user.code = userevent_SOUND;
 		ogg_playing = 0;
-		SDL_PushEvent(&event);
 	}
 }
 
