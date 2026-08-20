@@ -61,15 +61,8 @@ extern "C" {
 #ifdef __PS2__
 void ps2_boot_log(const char* format, ...);
 void ps2_boot_fatal(const char* message);
-extern int ps2_trace_frame;
-#define PS2_FRAME_TRACE(stage) do { \
-	if (ps2_trace_frame >= 0 && ps2_trace_frame < 16) { \
-		ps2_boot_log("frame %d: %s", ps2_trace_frame, stage); \
-	} \
-} while (0)
 #else
 #define ps2_boot_log(...) ((void)0)
-#define PS2_FRAME_TRACE(stage) ((void)0)
 #endif
 #include "types.h"
 #include "proto.h"

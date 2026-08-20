@@ -612,7 +612,6 @@ void midi_callback(void *userdata, Uint8 *stream, int len) {
 void stop_midi() {
 	if (!midi_playing && !midi_cleanup_pending) return;
 //	SDL_PauseAudio(1);
-	PS2_FRAME_TRACE("audio: stop_midi before SDL_LockAudio");
 	SDL_LockAudio();
 	if (midi_playing || midi_cleanup_pending) {
 		midi_playing = 0;
@@ -620,7 +619,6 @@ void stop_midi() {
 		midi_cleanup_pending = false;
 	}
 	SDL_UnlockAudio();
-	PS2_FRAME_TRACE("audio: stop_midi completed");
 }
 
 void free_midi_resources(void) {

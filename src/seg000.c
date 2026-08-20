@@ -869,39 +869,26 @@ int process_key() {
 
 // seg000:08EB
 void play_frame() {
-	PS2_FRAME_TRACE("play_frame: entered");
 	// play feather fall music if there is more than 1 second of feather fall left
 	if (fixes->fix_quicksave_during_feather && is_feather_fall >= 10 && !check_sound_playing()) {
 		play_sound(sound_39_low_weight);
 	}
-	PS2_FRAME_TRACE("play_frame: before do_mobs");
 	do_mobs();
-	PS2_FRAME_TRACE("play_frame: do_mobs completed");
 	process_trobs();
-	PS2_FRAME_TRACE("play_frame: process_trobs completed");
 	check_skel();
-	PS2_FRAME_TRACE("play_frame: check_skel completed");
 	check_can_guard_see_kid();
-	PS2_FRAME_TRACE("play_frame: guard visibility completed");
 	// if level is restarted, return immediately
-	PS2_FRAME_TRACE("play_frame: before play_kid_frame");
 	if (play_kid_frame()) return;
-	PS2_FRAME_TRACE("play_frame: play_kid_frame completed");
 	play_guard_frame();
-	PS2_FRAME_TRACE("play_frame: play_guard_frame completed");
 	if (0 == resurrect_time) {
 		check_sword_hurting();
 		check_sword_hurt();
 	}
 	check_sword_vs_sword();
-	PS2_FRAME_TRACE("play_frame: sword checks completed");
 	do_delta_hp();
-	PS2_FRAME_TRACE("play_frame: delta hp completed");
 	exit_room();
-	PS2_FRAME_TRACE("play_frame: exit_room completed");
 	check_the_end();
 	check_guard_fallout();
-	PS2_FRAME_TRACE("play_frame: room/end checks completed");
 	if (current_level == 0) {
 		// Special event: level 0 running exit
 		if (Kid.room == /*24*/ custom->demo_end_room) {
@@ -927,7 +914,6 @@ void play_frame() {
 		}
 	}
 	show_time();
-	PS2_FRAME_TRACE("play_frame: show_time completed");
 	// expiring doesn't count on Jaffar/princess level
 	if (current_level < 13 && rem_min == 0) {
 		expired();
@@ -972,16 +958,7 @@ void draw_game_frame() {
 		}
 	}
 
-	PS2_FRAME_TRACE("draw: before play_next_sound");
-	#ifdef __PS2__
-	if (ps2_trace_frame >= 0 && ps2_trace_frame < 16) {
-		int next_type = (next_sound >= 0 && sound_pointers[next_sound] != NULL) ? sound_pointers[next_sound]->type : -1;
-		ps2_boot_log("frame %d: sound next=%d type=%d current=%d playing=%d",
-			ps2_trace_frame, next_sound, next_type, current_sound, check_sound_playing());
-	}
-	#endif
 	play_next_sound();
-	PS2_FRAME_TRACE("draw: play_next_sound completed");
 	// Note: texts are identified by their total time!
 	if (text_time_remaining == 1) {
 		// If the text's is about to expire:
@@ -1221,13 +1198,10 @@ void reset_level_unused_fields(bool loading_clean_level) {
 // seg000:0EA8
 // returns 1 if level is restarted, 0 otherwise
 int play_kid_frame() {
-	PS2_FRAME_TRACE("kid: entered");
 	loadkid_and_opp();
-	PS2_FRAME_TRACE("kid: loadkid_and_opp completed");
 	load_fram_det_col();
 	check_killed_shadow();
 	play_kid();
-	PS2_FRAME_TRACE("kid: play_kid completed");
 	if (upside_down && Char.alive >= 0) {
 		upside_down = 0;
 		need_redraw_because_flipped = 1;
@@ -1237,33 +1211,25 @@ int play_kid_frame() {
 	}
 	if (Char.room != 0) {
 		play_seq();
-		PS2_FRAME_TRACE("kid: play_seq completed");
 		fall_accel();
 		fall_speed();
-		PS2_FRAME_TRACE("kid: fall physics completed");
 		load_frame_to_obj();
 		load_fram_det_col();
 		set_char_collision();
-		PS2_FRAME_TRACE("kid: collision setup completed");
 		bump_into_opponent();
 		check_collisions();
 		check_bumped();
-		PS2_FRAME_TRACE("kid: collision checks completed");
 		check_gate_push();
-		PS2_FRAME_TRACE("kid: check_gate_push completed");
 		check_action();
 		check_press();
 		check_spike_below();
-		PS2_FRAME_TRACE("kid: action/press/spike checks completed");
 		if (resurrect_time == 0) {
 			check_spiked();
 			check_chomped_kid();
 		}
 		check_knock();
-		PS2_FRAME_TRACE("kid: hazard checks completed");
 	}
 	savekid();
-	PS2_FRAME_TRACE("kid: savekid completed");
 	return 0;
 }
 
