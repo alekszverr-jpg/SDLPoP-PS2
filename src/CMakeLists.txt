@@ -125,10 +125,6 @@ if(PS2)
     find_package(SDL2_image CONFIG REQUIRED)
     set_target_properties(prince PROPERTIES OUTPUT_NAME "BOOT" SUFFIX ".ELF")
     target_compile_options(prince PRIVATE -O2 -G0)
-    option(PS2_PROGRESSIVE "Use 720x480 progressive PS2 output" ON)
-    if(PS2_PROGRESSIVE)
-        target_compile_definitions(prince PRIVATE PS2_PROGRESSIVE=1)
-    endif()
     target_link_libraries(prince PRIVATE
         SDL2_image::SDL2_image-static
         SDL2::SDL2main

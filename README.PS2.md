@@ -8,8 +8,7 @@ Actions; a local PS2SDK installation is not required.
 
 Open the **Build PlayStation 2** workflow in GitHub Actions and run it, or push
 a commit. Download the `SDLPoP-PS2` artifact when the job finishes. It contains
-`SDLPoP-PS2.zip` and standalone ELF files for progressive and interlaced
-output.
+`SDLPoP-PS2.zip` and a standalone `BOOT.ELF`.
 
 ## Run
 
@@ -20,13 +19,16 @@ launch device, including `mass:`, `host:`, memory card and optical media.
 
 ## Video modes
 
-- `BOOT.ELF` / `BOOT-480P.ELF`: 720x480 progressive at 60 Hz. This is the
-  preferred version and requires a display and cable which accept 480p.
-- `BOOT-480I.ELF`: 640x448 NTSC interlaced fallback for standard-definition
-  televisions which cannot synchronize to 480p.
+- The game always boots in safe 640x224 NTSC 240p, which is progressive and
+  compatible with standard-definition CRT televisions.
+- The **Settings > Visuals > PS2 video mode** item can test 720x480p at 60 Hz.
+  480p requires a compatible display and cable.
+- After switching to 480p, select **OK** within 10 seconds. If the display
+  cannot show the confirmation dialog, the game automatically recreates the
+  renderer in 240p.
 
-Both versions expand the original 320x200 DOS framebuffer over the complete
-4:3 PS2 raster. PS2-specific defaults force sharp nearest-neighbour scaling
+Both modes expand the original 320x200 DOS framebuffer over the complete 4:3
+PS2 raster. PS2-specific defaults force sharp nearest-neighbour scaling
 and disable integer scaling, avoiding the incomplete render-to-texture path in
 the SDL PS2 backend. The backend is also patched to use the GS neutral texture
 modulation value, preventing the washed-out, approximately double-bright image

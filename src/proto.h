@@ -599,6 +599,9 @@ void turn_sound_on_off(byte new_state);
 int check_sound_playing(void);
 void apply_aspect_ratio(void);
 void window_resized(void);
+#ifdef __PS2__
+void ps2_set_video_mode(byte mode);
+#endif
 void set_gr_mode(byte grmode);
 SDL_Surface* get_final_surface(void);
 void update_screen(void);

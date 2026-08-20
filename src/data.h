@@ -630,6 +630,10 @@ extern SDL_Texture* texture_sharp;
 extern SDL_Texture* texture_fuzzy;
 extern SDL_Texture* texture_blurry;
 extern SDL_Texture* target_texture;
+#ifdef __PS2__
+// 0 = safe NTSC 240p, 1 = DTV 480p (confirmed per session).
+extern byte ps2_video_mode INIT(= 0);
+#endif
 
 extern SDL_GameController* sdl_controller_ INIT( = 0 );
 extern SDL_Joystick* sdl_joystick_; // in case our joystick is not compatible with SDL_GameController

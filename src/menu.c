@@ -109,6 +109,7 @@ enum menu_dialog_ids {
 	DIALOG_RESTORE_DEFAULT_SETTINGS,
 	DIALOG_CONFIRM_QUIT,
 	DIALOG_SELECT_LEVEL,
+	DIALOG_CONFIRM_480P,
 };
 
 pause_menu_item_type settings_menu_items[] = {
@@ -152,6 +153,7 @@ enum setting_ids {
 	SETTING_JOYSTICK_THRESHOLD,
 	SETTING_JOYSTICK_ONLY_HORIZONTAL,
 	SETTING_FULLSCREEN,
+	SETTING_PS2_VIDEO_MODE,
 	SETTING_USE_HARDWARE_ACCELERATION,
 	SETTING_USE_CORRECT_ASPECT_RATIO,
 	SETTING_USE_INTEGER_SCALING,
@@ -358,6 +360,9 @@ setting_type general_settings[] = {
 
 NAMES_LIST(use_hardware_acceleration_setting_names, {"OFF", "ON", "AUTO",});
 NAMES_LIST(scaling_type_setting_names, {"Sharp", "Fuzzy", "Blurry",});
+#ifdef __PS2__
+NAMES_LIST(ps2_video_mode_setting_names, {"240p", "480p",});
+#endif
 
 int integer_scaling_possible =
 #if SDL_VERSION_ATLEAST(2,0,5) // SDL_RenderSetIntegerScale
@@ -368,6 +373,13 @@ int integer_scaling_possible =
 ;
 
 setting_type visuals_settings[] = {
+	#ifdef __PS2__
+		{.id = SETTING_PS2_VIDEO_MODE, .style = SETTING_STYLE_NUMBER, .number_type = SETTING_BYTE, .max = 1,
+				.linked = &ps2_video_mode, .names_list = &ps2_video_mode_setting_names_list,
+				.text = "PS2 video mode",
+				.explanation = "240p - Safe progressive mode for standard CRT televisions.\n"
+						"480p - Test for 10 seconds; reverts to 240p unless confirmed."},
+	#endif
 		{.id = SETTING_FULLSCREEN, .style = SETTING_STYLE_TOGGLE, .linked = &start_fullscreen,
 				.text = "Start fullscreen",
 				.explanation = "Start the game in fullscreen mode.\nYou can also toggle fullscreen by pressing Alt+Enter."},
@@ -1499,6 +1511,15 @@ void increase_setting(setting_type* setting, int old_value) {
 	if (setting->linked != NULL && new_value <= setting->max) {
 		were_settings_changed = true;
 		set_setting_value(setting, new_value);
+		#ifdef __PS2__
+		if (setting->id == SETTING_PS2_VIDEO_MODE) {
+			ps2_set_video_mode((byte)new_value);
+			if (new_value == 1) {
+				current_dialog_box = DIALOG_CONFIRM_480P;
+				current_dialog_text = "Keep 480p?\nThe game will return to 240p automatically.";
+			}
+		}
+		#endif
 	}
 }
 
@@ -1512,6 +1533,11 @@ void decrease_setting(setting_type* setting, int old_value) {
 	if (setting->linked != NULL && new_value >= setting->min) {
 		were_settings_changed = true;
 		set_setting_value(setting, new_value);
+		#ifdef __PS2__
+		if (setting->id == SETTING_PS2_VIDEO_MODE) {
+			ps2_set_video_mode((byte)new_value);
+		}
+		#endif
 	}
 }
 
@@ -1920,6 +1946,9 @@ void confirmation_dialog_result(int which_dialog, int button) {
 			play_menu_sound(sound_10_sword_vs_sword);
 			were_settings_changed = true;
 			set_options_to_default();
+			#ifdef __PS2__
+			ps2_set_video_mode(0);
+			#endif
 			turn_setting_on_off(SETTING_USE_INTEGER_SCALING, use_integer_scaling, NULL);
 #ifdef USE_LIGHTING
 			turn_setting_on_off(SETTING_ENABLE_LIGHTING, enable_lighting, NULL);
@@ -1932,6 +1961,11 @@ void confirmation_dialog_result(int which_dialog, int button) {
 			key_test_quit();
 		}
 	} else {
+		#ifdef __PS2__
+		if (which_dialog == DIALOG_CONFIRM_480P) {
+			ps2_set_video_mode(0);
+		}
+		#endif
 		play_menu_sound(sound_22_loose_shake_3);
 	}
 }
@@ -1944,10 +1978,30 @@ rect_type ok_highlight_rect = {103, 108,  116,  158};
 void draw_confirmation_dialog(int which_dialog, const char* text) {
 	int highlighted_button = DIALOG_BUTTON_OK;
 	int old_highlighted_button = -1;
+	#ifdef __PS2__
+	Uint32 video_test_started = (which_dialog == DIALOG_CONFIRM_480P) ? SDL_GetTicks() : 0;
+	int old_video_seconds = -1;
+	#endif
 	for (;;) {
 		process_events();
 		key_test_paused_menu(key_test_quit());
 		process_additional_menu_input();
+
+		#ifdef __PS2__
+		int video_seconds = -1;
+		if (which_dialog == DIALOG_CONFIRM_480P) {
+			Uint32 elapsed = SDL_GetTicks() - video_test_started;
+			if (elapsed >= 10000) {
+				confirmation_dialog_result(which_dialog, DIALOG_BUTTON_CANCEL);
+				break;
+			}
+			video_seconds = 10 - (int)(elapsed / 1000);
+			if (video_seconds != old_video_seconds) {
+				old_video_seconds = video_seconds;
+				old_highlighted_button = -1;
+			}
+		}
+		#endif
 
 		if (menu_control_back == 1) {
 			confirmation_dialog_result(which_dialog, DIALOG_BUTTON_CANCEL);
@@ -1981,6 +2035,14 @@ void draw_confirmation_dialog(int which_dialog, const char* text) {
 			rect_type rect;
 			shrink2_rect(&rect, &copyprot_dialog->text_rect, 2, 1);
 			rect.bottom -= 14;
+			#ifdef __PS2__
+			char video_text[160];
+			if (which_dialog == DIALOG_CONFIRM_480P) {
+				snprintf(video_text, sizeof(video_text),
+					"Keep 480p?\nReturning to 240p in %d seconds.", video_seconds);
+				text = video_text;
+			}
+			#endif
 			show_text_with_color(&rect, halign_center, valign_middle, text, color_15_brightwhite);
 			clear_kbd_buf();
 

@@ -79,35 +79,23 @@ jobs:
           cmake --build /tmp/SDL2_image-build --parallel 2
           cmake --install /tmp/SDL2_image-build
 
-      - name: Build SDLPoP video modes
+      - name: Build SDLPoP
         shell: bash
         run: |
           set -euo pipefail
-          cmake -S src -B build-ps2-480p \
+          cmake -S src -B build-ps2 \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="$PS2DEV/share/ps2dev.cmake" \
-            -DCMAKE_PREFIX_PATH="$PS2SDK/ports" \
-            -DPS2_PROGRESSIVE=ON
-          cmake --build build-ps2-480p --parallel 2
+            -DCMAKE_PREFIX_PATH="$PS2SDK/ports"
+          cmake --build build-ps2 --parallel 2
           test -s BOOT.ELF
-          cp BOOT.ELF BOOT-480P.ELF
-
-          cmake -S src -B build-ps2-480i \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="$PS2DEV/share/ps2dev.cmake" \
-            -DCMAKE_PREFIX_PATH="$PS2SDK/ports" \
-            -DPS2_PROGRESSIVE=OFF
-          cmake --build build-ps2-480i --parallel 2
-          test -s BOOT.ELF
-          cp BOOT.ELF BOOT-480I.ELF
-          cp BOOT-480P.ELF BOOT.ELF
 
       - name: Package PS2 release
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist/SDLPoP-PS2
-          cp BOOT.ELF BOOT-480P.ELF BOOT-480I.ELF SDLPoP.ini README.PS2.md dist/SDLPoP-PS2/
+          cp BOOT.ELF SDLPoP.ini README.PS2.md dist/SDLPoP-PS2/
           cp -R data dist/SDLPoP-PS2/data
           (cd dist && cmake -E tar cf SDLPoP-PS2.zip --format=zip SDLPoP-PS2)
 
@@ -118,6 +106,4 @@ jobs:
           path: |
             dist/SDLPoP-PS2.zip
             dist/SDLPoP-PS2/BOOT.ELF
-            dist/SDLPoP-PS2/BOOT-480P.ELF
-            dist/SDLPoP-PS2/BOOT-480I.ELF
           if-no-files-found: error

@@ -6,7 +6,7 @@ file(READ "${SDL_PS2_RENDER_SOURCE}" SDL_PS2_RENDER_CONTENT)
 
 # SDL's PS2 renderer always selects 640x448 NTSC interlaced output. Let the
 # application request 720x480 progressive output through a private hint while
-# retaining the original mode as a fallback build.
+# using true 240p as the safe default and fallback mode.
 set(SDL_PS2_MODE_OLD [[    gsGlobal->Mode = GS_MODE_NTSC;
     gsGlobal->Height = 448;]])
 set(SDL_PS2_MODE_NEW [[    const char *videoMode = SDL_GetHint("SDL_PS2_VIDEO_MODE");
@@ -18,10 +18,10 @@ set(SDL_PS2_MODE_NEW [[    const char *videoMode = SDL_GetHint("SDL_PS2_VIDEO_MO
         gsGlobal->Height = 480;
     } else {
         gsGlobal->Mode = GS_MODE_NTSC;
-        gsGlobal->Interlace = GS_INTERLACED;
-        gsGlobal->Field = GS_FIELD;
+        gsGlobal->Interlace = GS_NONINTERLACED;
+        gsGlobal->Field = GS_FRAME;
         gsGlobal->Width = 640;
-        gsGlobal->Height = 448;
+        gsGlobal->Height = 224;
     }]])
 
 # With GS texture modulation, 0x80 is neutral. SDL supplies 0xFF for an
