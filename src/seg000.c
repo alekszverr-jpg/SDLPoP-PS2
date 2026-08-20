@@ -1433,11 +1433,22 @@ void draw_guard_hp(short curr_hp,short max_hp) {
 		// shadow has HP only on level 12
 		(guard_charid != charid_1_shadow || current_level == 12)
 	) {
+		#ifdef __PS2__
+		// The 6-pixel HP sprite used to end at source pixel 319. The PS2
+		// renderer repeats that colored edge texel while scaling, turning the
+		// rightmost triangle into a horizontal smear. Keep a black texel at the
+		// texture boundary and move the indicators one pixel left.
+		const short guard_hp_right_x = 313;
+		const rect_type guard_hp_edge = {194, 319, 199, 320};
+		method_5_rect(&guard_hp_edge, blitters_0_no_transp, color_0_black);
+		#else
+		const short guard_hp_right_x = 314;
+		#endif
 		for (short drawn_hp_index = curr_hp; drawn_hp_index < max_hp; ++drawn_hp_index) {
-			method_6_blit_img_to_scr(chtab_addrs[id_chtab_5_guard]->images[0], 314 - drawn_hp_index * 7, 194, blitters_9_black);
+			method_6_blit_img_to_scr(chtab_addrs[id_chtab_5_guard]->images[0], guard_hp_right_x - drawn_hp_index * 7, 194, blitters_9_black);
 		}
 		for (short drawn_hp_index = 0; drawn_hp_index < curr_hp; ++drawn_hp_index) {
-			method_6_blit_img_to_scr(chtab_addrs[id_chtab_5_guard]->images[0], 314 - drawn_hp_index * 7, 194, blitters_0_no_transp);
+			method_6_blit_img_to_scr(chtab_addrs[id_chtab_5_guard]->images[0], guard_hp_right_x - drawn_hp_index * 7, 194, blitters_0_no_transp);
 		}
 	}
 }

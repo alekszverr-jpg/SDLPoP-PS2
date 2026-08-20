@@ -1829,7 +1829,12 @@ void draw_setting(setting_type* setting, rect_type* parent, int* y_offset, int i
 
 	show_text_with_color(&text_rect, halign_left, valign_top, setting->text, text_color);
 
-	if (setting->style == SETTING_STYLE_TOGGLE && !disabled) {
+	if (setting->style == SETTING_STYLE_TOGGLE && disabled) {
+		// Show the effective value even when a parent option (for example the
+		// Original DOS profile) disables this setting.
+		show_text_with_color(&text_rect, halign_right, valign_top, "OFF", color_7_lightgray);
+
+	} else if (setting->style == SETTING_STYLE_TOGGLE && !disabled) {
 		bool setting_enabled = true;
 		if (setting->linked != NULL) {
 			setting_enabled = *(byte*)setting->linked;
