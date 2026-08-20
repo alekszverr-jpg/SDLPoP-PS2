@@ -41,6 +41,9 @@ jobs:
           cmake \
             -DSDL_PS2_AUDIO_SOURCE=/tmp/SDL2/src/audio/ps2/SDL_ps2audio.c \
             -P "$GITHUB_WORKSPACE/ps2/patch_sdl2_audio.cmake"
+          cmake \
+            -DSDL_PS2_RENDER_SOURCE=/tmp/SDL2/src/render/ps2/SDL_render_ps2.c \
+            -P "$GITHUB_WORKSPACE/ps2/patch_sdl2_video.cmake"
           cmake -S /tmp/SDL2 -B /tmp/SDL2-build \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="$PS2DEV/share/ps2dev.cmake" \
@@ -76,23 +79,35 @@ jobs:
           cmake --build /tmp/SDL2_image-build --parallel 2
           cmake --install /tmp/SDL2_image-build
 
-      - name: Build SDLPoP
+      - name: Build SDLPoP video modes
         shell: bash
         run: |
           set -euo pipefail
-          cmake -S src -B build-ps2 \
+          cmake -S src -B build-ps2-480p \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="$PS2DEV/share/ps2dev.cmake" \
-            -DCMAKE_PREFIX_PATH="$PS2SDK/ports"
-          cmake --build build-ps2 --parallel 2
+            -DCMAKE_PREFIX_PATH="$PS2SDK/ports" \
+            -DPS2_PROGRESSIVE=ON
+          cmake --build build-ps2-480p --parallel 2
           test -s BOOT.ELF
+          cp BOOT.ELF BOOT-480P.ELF
+
+          cmake -S src -B build-ps2-480i \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$PS2DEV/share/ps2dev.cmake" \
+            -DCMAKE_PREFIX_PATH="$PS2SDK/ports" \
+            -DPS2_PROGRESSIVE=OFF
+          cmake --build build-ps2-480i --parallel 2
+          test -s BOOT.ELF
+          cp BOOT.ELF BOOT-480I.ELF
+          cp BOOT-480P.ELF BOOT.ELF
 
       - name: Package PS2 release
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist/SDLPoP-PS2
-          cp BOOT.ELF SDLPoP.ini README.PS2.md dist/SDLPoP-PS2/
+          cp BOOT.ELF BOOT-480P.ELF BOOT-480I.ELF SDLPoP.ini README.PS2.md dist/SDLPoP-PS2/
           cp -R data dist/SDLPoP-PS2/data
           (cd dist && cmake -E tar cf SDLPoP-PS2.zip --format=zip SDLPoP-PS2)
 
@@ -103,4 +118,6 @@ jobs:
           path: |
             dist/SDLPoP-PS2.zip
             dist/SDLPoP-PS2/BOOT.ELF
+            dist/SDLPoP-PS2/BOOT-480P.ELF
+            dist/SDLPoP-PS2/BOOT-480I.ELF
           if-no-files-found: error

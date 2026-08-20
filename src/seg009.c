@@ -2503,11 +2503,23 @@ int check_sound_playing() {
 
 void apply_aspect_ratio() {
 	// Allow us to use a consistent set of screen co-ordinates, even if the screen size changes
+	#ifdef __PS2__
+	// The PS2's analog 480-line modes are displayed as 4:3 even though their
+	// framebuffer pixels are not square. Fill the complete physical raster so
+	// the original 320x200 image gets its intended DOS pixel aspect ratio and
+	// does not leave a 48-line bar below the picture.
+	#ifdef PS2_PROGRESSIVE
+	SDL_RenderSetLogicalSize(renderer_, 720, 480);
+	#else
+	SDL_RenderSetLogicalSize(renderer_, 640, 448);
+	#endif
+	#else
 	if (use_correct_aspect_ratio) {
 		SDL_RenderSetLogicalSize(renderer_, 320 * 5, 200 * 6); // 4:3
 	} else {
 		SDL_RenderSetLogicalSize(renderer_, 320, 200); // 16:10
 	}
+	#endif
 	window_resized();
 }
 
@@ -2580,6 +2592,26 @@ void init_scaling(void) {
 // seg009:38ED
 void set_gr_mode(byte grmode) {
 	ps2_boot_log("set_gr_mode: entered");
+	#ifdef __PS2__
+	// SDLPoP.cfg can override the built-in defaults after SDLPoP.ini was
+	// intentionally skipped on USB. Keep settings which are known to work with
+	// SDL's incomplete PS2 renderer and select the mode before SDL initializes.
+	use_hardware_acceleration = 1;
+	use_correct_aspect_ratio = 0;
+	use_integer_scaling = 0;
+	scaling_type = 0;
+	#ifdef PS2_PROGRESSIVE
+	pop_window_width = 720;
+	pop_window_height = 480;
+	SDL_SetHint("SDL_PS2_VIDEO_MODE", "480p");
+	ps2_boot_log("video: requesting 720x480 progressive, sharp scaling");
+	#else
+	pop_window_width = 640;
+	pop_window_height = 448;
+	SDL_SetHint("SDL_PS2_VIDEO_MODE", "480i");
+	ps2_boot_log("video: requesting 640x448 NTSC interlaced fallback, sharp scaling");
+	#endif
+	#endif
 #ifdef SDL_HINT_WINDOWS_DISABLE_THREAD_NAMING
 	SDL_SetHint(SDL_HINT_WINDOWS_DISABLE_THREAD_NAMING, "1");
 #endif
@@ -2658,6 +2690,14 @@ void set_gr_mode(byte grmode) {
 	ps2_boot_log("set_gr_mode: SDL renderer created");
 	SDL_RendererInfo renderer_info;
 	if (SDL_GetRendererInfo(renderer_, &renderer_info) == 0) {
+		#ifdef __PS2__
+		int output_width = 0;
+		int output_height = 0;
+		SDL_GetRendererOutputSize(renderer_, &output_width, &output_height);
+		ps2_boot_log("video: renderer=%s output=%dx%d flags=0x%08x",
+			renderer_info.name ? renderer_info.name : "unknown",
+			output_width, output_height, (unsigned int)renderer_info.flags);
+		#endif
 		if (renderer_info.flags & SDL_RENDERER_TARGETTEXTURE) {
 			is_renderer_targettexture_supported = true;
 		}
