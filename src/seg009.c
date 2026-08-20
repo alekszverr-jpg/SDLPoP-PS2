@@ -2612,8 +2612,8 @@ typedef struct ps2_screen_settings_file_type {
 #define PS2_SCREEN_SETTINGS_MAGIC 0x31503253u
 
 void ps2_apply_screen_adjustment(void) {
-	ps2_screen_width = MIN(MAX(ps2_screen_width, 70), 100);
-	ps2_screen_height = MIN(MAX(ps2_screen_height, 70), 100);
+	ps2_screen_width = MIN(MAX(ps2_screen_width, 70), 130);
+	ps2_screen_height = MIN(MAX(ps2_screen_height, 70), 130);
 	ps2_screen_x = MIN(MAX(ps2_screen_x, -15), 15);
 	ps2_screen_y = MIN(MAX(ps2_screen_y, -15), 15);
 	ps2_screen_settings_dirty = 1;
