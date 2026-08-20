@@ -85,8 +85,13 @@ pause_menu_item_type pause_menu_items[] = {
 		// TODO: Add a cheats menu, where you can choose a cheat from a list?
 		/*{.id = PAUSE_MENU_CHEATS,        .text = "CHEATS", .required = &cheats_enabled},*/
 #ifdef USE_QUICKSAVE // TODO: If quicksave is disabled, show regular save/load instead?
+	#ifdef __PS2__
+		{.id = PAUSE_MENU_SAVE_GAME,     .text = "QUICKSAVE"},
+		{.id = PAUSE_MENU_LOAD_GAME,     .text = "QUICKLOAD"},
+	#else
 		{.id = PAUSE_MENU_SAVE_GAME,     .text = "QUICKSAVE (F6)"},
 		{.id = PAUSE_MENU_LOAD_GAME,     .text = "QUICKLOAD (F9)"},
+	#endif
 #endif
 		{.id = PAUSE_MENU_RESTART_LEVEL, .text = "RESTART LEVEL"},
 		{.id = PAUSE_MENU_SETTINGS,      .text = "SETTINGS"},
@@ -154,6 +159,10 @@ enum setting_ids {
 	SETTING_JOYSTICK_ONLY_HORIZONTAL,
 	SETTING_FULLSCREEN,
 	SETTING_PS2_VIDEO_MODE,
+	SETTING_PS2_SCREEN_WIDTH,
+	SETTING_PS2_SCREEN_HEIGHT,
+	SETTING_PS2_SCREEN_X,
+	SETTING_PS2_SCREEN_Y,
 	SETTING_USE_HARDWARE_ACCELERATION,
 	SETTING_USE_CORRECT_ASPECT_RATIO,
 	SETTING_USE_INTEGER_SCALING,
@@ -330,10 +339,16 @@ typedef struct setting_type {
 } setting_type;
 
 setting_type general_settings[] = {
+	#ifdef __PS2__
+		{.id = SETTING_SHOW_MENU_ON_PAUSE, .style = SETTING_STYLE_TOGGLE, .linked = &enable_pause_menu,
+				.text = "Enable pause menu",
+				.explanation = "Press Start or Select to open the pause menu."},
+	#else
 		{.id = SETTING_SHOW_MENU_ON_PAUSE, .style = SETTING_STYLE_TOGGLE, .linked = &enable_pause_menu,
 				.text = "Enable pause menu",
 				.explanation = "Show the in-game menu when you pause the game.\n"
 						"If disabled, you can still bring up the menu by pressing Backspace."},
+	#endif
 		{.id = SETTING_ENABLE_INFO_SCREEN, .style = SETTING_STYLE_TOGGLE, .linked = &enable_info_screen,
 				.text = "Display info screen on launch",
 				.explanation = "Display the SDLPoP information screen when the game starts."},
@@ -379,7 +394,24 @@ setting_type visuals_settings[] = {
 				.text = "PS2 video mode",
 				.explanation = "240p - Safe progressive mode for standard CRT televisions.\n"
 						"480p - Test for 10 seconds; reverts to 240p unless confirmed."},
+		{.id = SETTING_PS2_SCREEN_WIDTH, .style = SETTING_STYLE_NUMBER, .number_type = SETTING_BYTE,
+				.linked = &ps2_screen_width, .min = 70, .max = 100,
+				.text = "Screen width",
+				.explanation = "Adjust the picture width to fit the television overscan area."},
+		{.id = SETTING_PS2_SCREEN_HEIGHT, .style = SETTING_STYLE_NUMBER, .number_type = SETTING_BYTE,
+				.linked = &ps2_screen_height, .min = 70, .max = 100,
+				.text = "Screen height",
+				.explanation = "Adjust the picture height to fit the television overscan area."},
+		{.id = SETTING_PS2_SCREEN_X, .style = SETTING_STYLE_NUMBER, .number_type = SETTING_SBYTE,
+				.linked = &ps2_screen_x, .min = -15, .max = 15,
+				.text = "Horizontal position",
+				.explanation = "Move the picture left or right."},
+		{.id = SETTING_PS2_SCREEN_Y, .style = SETTING_STYLE_NUMBER, .number_type = SETTING_SBYTE,
+				.linked = &ps2_screen_y, .min = -15, .max = 15,
+				.text = "Vertical position",
+				.explanation = "Move the picture up or down."},
 	#endif
+	#ifndef __PS2__
 		{.id = SETTING_FULLSCREEN, .style = SETTING_STYLE_TOGGLE, .linked = &start_fullscreen,
 				.text = "Start fullscreen",
 				.explanation = "Start the game in fullscreen mode.\nYou can also toggle fullscreen by pressing Alt+Enter."},
@@ -406,6 +438,7 @@ setting_type visuals_settings[] = {
 				.explanation = "Sharp - Use nearest neighbour resampling.\n"
 						"Fuzzy - First upscale to double size, then use smooth scaling.\n"
 						"Blurry - Use smooth scaling."},
+	#endif
 #ifdef USE_FADE
 		{.id = SETTING_ENABLE_FADE, .style = SETTING_STYLE_TOGGLE, .linked = &enable_fade,
 				.text = "Fading enabled",
@@ -435,7 +468,11 @@ setting_type gameplay_settings[] = {
 #ifdef USE_QUICKSAVE
 		{.id = SETTING_ENABLE_QUICKSAVE, .style = SETTING_STYLE_TOGGLE, .linked = &enable_quicksave,
 				.text = "Enable quicksave",
+				#ifdef __PS2__
+				.explanation = "Use QUICKSAVE and QUICKLOAD from the pause menu."},
+				#else
 				.explanation = "Enable quicksave/load feature.\nPress F6 to quicksave, F9 to quickload."},
+				#endif
 		{.id = SETTING_ENABLE_QUICKSAVE_PENALTY, .style = SETTING_STYLE_TOGGLE, .linked = &enable_quicksave_penalty,
 				.text = "Quicksave time penalty",
 				.explanation = "Try to let time run out when quickloading (similar to dying).\n"
@@ -443,11 +480,13 @@ setting_type gameplay_settings[] = {
 						"but a penalty (up to one minute) will be applied."},
 #endif
 #ifdef USE_REPLAY
+	#ifndef __PS2__
 		{.id = SETTING_ENABLE_REPLAY, .style = SETTING_STYLE_TOGGLE, .linked = &enable_replay,
 				.text = "Enable replays",
 				.explanation = "Enable recording/replay feature.\n"
 						"Press Ctrl+Tab in-game to start recording.\n"
 						"To stop, press Ctrl+Tab again."},
+	#endif
 #endif
 		{.id = SETTING_USE_FIXES_AND_ENHANCEMENTS, .style = SETTING_STYLE_TOGGLE, .linked = &use_fixes_and_enhancements,
 				.text = "Enhanced mode (allow bug fixes)",
@@ -703,11 +742,11 @@ setting_type mods_settings[] = {
 		{.id = SETTING_START_UPSIDE_DOWN, .style = SETTING_STYLE_TOGGLE, .required = &use_custom_options,
 				.linked = &custom_saved.start_upside_down,
 				.text = "Start with the screen flipped",
-				.explanation = "Start the game with the screen flipped upside down, similar to Shift+I (default = OFF)"},
+				.explanation = "Start the game with the screen flipped upside down. (default = OFF)"},
 		{.id = SETTING_START_IN_BLIND_MODE, .style = SETTING_STYLE_TOGGLE, .required = &use_custom_options,
 				.linked = &custom_saved.start_in_blind_mode,
 				.text = "Start in blind mode",
-				.explanation = "Start in blind mode, similar to Shift+B (default = OFF)"},
+				.explanation = "Start the game in blind mode. (default = OFF)"},
 		{.id = SETTING_COPYPROT_LEVEL, .style = SETTING_STYLE_NUMBER, .required = &use_custom_options,
 				.linked = &custom_saved.copyprot_level, .number_type = SETTING_WORD, .max = 16, .names_list = &never_is_16_list,
 				.text = "Copy protection before level",
@@ -748,18 +787,18 @@ setting_type mods_settings[] = {
 						"\n(default = OFF)"},
 		{.id = SETTING_SHIFT_L_ALLOWED_UNTIL_LEVEL, .style = SETTING_STYLE_NUMBER, .required = &use_custom_options,
 				.linked = &custom_saved.shift_L_allowed_until_level, .number_type = SETTING_WORD, .max = 16, .names_list = &never_is_16_list,
-				.text = "Shift+L allowed until level",
-				.explanation = "First level where level skipping with Shift+L is denied in non-cheat mode.\n"
+				.text = "Level skip allowed until level",
+				.explanation = "First level where level skipping is denied in non-cheat mode.\n"
 						"(default = 4)"},
 		{.id = SETTING_SHIFT_L_REDUCED_MINUTES, .style = SETTING_STYLE_NUMBER, .required = &use_custom_options,
 				.linked = &custom_saved.shift_L_reduced_minutes, .number_type = SETTING_WORD, .max = UINT16_MAX,
-				.text = "Minutes left after Shift+L used",
-				.explanation = "Number of minutes left after Shift+L is used in non-cheat mode.\n"
+				.text = "Minutes left after level skip",
+				.explanation = "Number of minutes left after a level skip in non-cheat mode.\n"
 						"(default = 15)"},
 		{.id = SETTING_SHIFT_L_REDUCED_TICKS, .style = SETTING_STYLE_NUMBER, .required = &use_custom_options,
 				.linked = &custom_saved.shift_L_reduced_ticks, .number_type = SETTING_WORD, .max = UINT16_MAX,
-				.text = "Seconds left after Shift+L used",
-				.explanation = "Number of seconds left after Shift+L is used in non-cheat mode.\n(default = 59.92)"},
+				.text = "Seconds left after level skip",
+				.explanation = "Number of seconds left after a level skip in non-cheat mode.\n(default = 59.92)"},
 		{.id = SETTING_DEMO_HITP, .style = SETTING_STYLE_NUMBER, .required = &use_custom_options,
 				.linked = &custom_saved.demo_hitp, .number_type = SETTING_WORD, .max = UINT16_MAX,
 				.text = "Demo level hitpoints",
@@ -1052,6 +1091,28 @@ setting_type level_settings[] = {
 						"Set to -1 to disable."},
 };
 
+#ifdef __PS2__
+setting_type controls_settings[] = {
+		{.id = SETTING_KEY_LEFT, .style = SETTING_STYLE_TEXT_ONLY,
+				.text = "D-pad / Left stick",
+				.explanation = "Move, run and navigate menus."},
+		{.id = SETTING_KEY_UP, .style = SETTING_STYLE_TEXT_ONLY,
+				.text = "Triangle",
+				.explanation = "Jump and climb up."},
+		{.id = SETTING_KEY_DOWN, .style = SETTING_STYLE_TEXT_ONLY,
+				.text = "Cross",
+				.explanation = "Crouch, climb down and confirm menu items."},
+		{.id = SETTING_KEY_ACTION, .style = SETTING_STYLE_TEXT_ONLY,
+				.text = "Square / R1",
+				.explanation = "Careful step, grab, attack and other actions."},
+		{.id = SETTING_KEY_ESC, .style = SETTING_STYLE_TEXT_ONLY,
+				.text = "Start / Select",
+				.explanation = "Open or close the pause menu."},
+		{.id = SETTING_KEY_ENTER, .style = SETTING_STYLE_TEXT_ONLY,
+				.text = "D-pad Left / Right",
+				.explanation = "Change the selected setting."},
+};
+#else
 setting_type controls_settings[] = {
 		{.id = SETTING_KEY_LEFT, .style = SETTING_STYLE_KEY, .required = NULL,
 				.linked = &key_left, .number_type = SETTING_INT,
@@ -1090,6 +1151,7 @@ setting_type controls_settings[] = {
 				.text = "Exit a menu, pause",
 				.explanation = ""},
 };
+#endif
 
 typedef struct settings_area_type {
 	setting_type* settings;
@@ -1518,6 +1580,11 @@ void increase_setting(setting_type* setting, int old_value) {
 				current_dialog_box = DIALOG_CONFIRM_480P;
 				current_dialog_text = "Keep 480p?\nThe game will return to 240p automatically.";
 			}
+		} else if (setting->id == SETTING_PS2_SCREEN_WIDTH ||
+				setting->id == SETTING_PS2_SCREEN_HEIGHT ||
+				setting->id == SETTING_PS2_SCREEN_X ||
+				setting->id == SETTING_PS2_SCREEN_Y) {
+			ps2_apply_screen_adjustment();
 		}
 		#endif
 	}
@@ -1536,6 +1603,11 @@ void decrease_setting(setting_type* setting, int old_value) {
 		#ifdef __PS2__
 		if (setting->id == SETTING_PS2_VIDEO_MODE) {
 			ps2_set_video_mode((byte)new_value);
+		} else if (setting->id == SETTING_PS2_SCREEN_WIDTH ||
+				setting->id == SETTING_PS2_SCREEN_HEIGHT ||
+				setting->id == SETTING_PS2_SCREEN_X ||
+				setting->id == SETTING_PS2_SCREEN_Y) {
+			ps2_apply_screen_adjustment();
 		}
 		#endif
 	}
@@ -1577,6 +1649,15 @@ char* print_setting_value_(setting_type* setting, int value, char* buffer, size_
 		}
 	}
 	if (!has_name) {
+		#ifdef __PS2__
+		if (setting->id == SETTING_PS2_SCREEN_WIDTH || setting->id == SETTING_PS2_SCREEN_HEIGHT) {
+			snprintf(buffer, buffer_size, "%d%%", value);
+			return buffer;
+		} else if (setting->id == SETTING_PS2_SCREEN_X || setting->id == SETTING_PS2_SCREEN_Y) {
+			snprintf(buffer, buffer_size, "%+d%%", value);
+			return buffer;
+		}
+		#endif
 		if (setting->id == SETTING_START_TICKS_LEFT ||
 				setting->id == SETTING_SHIFT_L_REDUCED_TICKS ||
 				setting->id == SETTING_MOUSE_DELAY ||
@@ -1947,6 +2028,11 @@ void confirmation_dialog_result(int which_dialog, int button) {
 			were_settings_changed = true;
 			set_options_to_default();
 			#ifdef __PS2__
+			ps2_screen_width = 100;
+			ps2_screen_height = 100;
+			ps2_screen_x = 0;
+			ps2_screen_y = 0;
+			ps2_apply_screen_adjustment();
 			ps2_set_video_mode(0);
 			#endif
 			turn_setting_on_off(SETTING_USE_INTEGER_SCALING, use_integer_scaling, NULL);
@@ -2527,6 +2613,9 @@ void menu_was_closed(void) {
 		save_ingame_settings();
 		were_settings_changed = false;
 	}
+	#ifdef __PS2__
+	ps2_save_screen_settings();
+	#endif
 	// In fullscreen mode, hide the mouse cursor (because it is only needed in the menu).
 	dword flags = SDL_GetWindowFlags(window_);
 	if (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {

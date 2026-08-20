@@ -2419,6 +2419,20 @@ const rect_type splash_text_1_rect = {0, 0, 50, 320};
 const rect_type splash_text_2_rect = {50, 0, 200, 320};
 
 const char* splash_text_1 = "SDLPoP " SDLPOP_VERSION;
+#ifdef __PS2__
+const char* splash_text_2 =
+		"DUALSHOCK 2 CONTROLS\n"
+		"D-pad / Left stick: move\n"
+		"Triangle: jump / climb up\n"
+		"Cross: crouch / climb down / confirm\n"
+		"Square or R1: action / grab / attack\n"
+		"Start or Select: pause menu\n"
+		"\n"
+		"Screen size and 240p/480p are in\n"
+		"Settings > Visuals.\n"
+		"\n"
+		"Press Cross to continue...";
+#else
 const char* splash_text_2 =
 		"In-game, Esc opens a settings/quicksave menu.\n"
 		"\n"
@@ -2434,6 +2448,7 @@ const char* splash_text_2 =
 		"Questions? Visit https://forum.princed.org\n"
 		"\n"
 		"Press any key to continue...";
+#endif
 
 void show_splash() {
 	if (!enable_info_screen || start_level >= 0) return;

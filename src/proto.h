@@ -601,6 +601,9 @@ void apply_aspect_ratio(void);
 void window_resized(void);
 #ifdef __PS2__
 void ps2_set_video_mode(byte mode);
+void ps2_apply_screen_adjustment(void);
+void ps2_load_screen_settings(void);
+void ps2_save_screen_settings(void);
 #endif
 void set_gr_mode(byte grmode);
 SDL_Surface* get_final_surface(void);

@@ -633,6 +633,11 @@ extern SDL_Texture* target_texture;
 #ifdef __PS2__
 // 0 = safe NTSC 240p, 1 = DTV 480p (confirmed per session).
 extern byte ps2_video_mode INIT(= 0);
+extern byte ps2_screen_width INIT(= 100);
+extern byte ps2_screen_height INIT(= 100);
+extern sbyte ps2_screen_x INIT(= 0);
+extern sbyte ps2_screen_y INIT(= 0);
+extern byte ps2_screen_settings_dirty INIT(= 0);
 #endif
 
 extern SDL_GameController* sdl_controller_ INIT( = 0 );

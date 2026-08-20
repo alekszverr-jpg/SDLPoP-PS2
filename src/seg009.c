@@ -511,7 +511,11 @@ dat_type* open_dat(const char* filename, int optional) {
 		int result = stat(data_path, &path_stat);
 		if (result != 0 || !S_ISDIR(path_stat.st_mode)) {
 			char error_message[256];
+			#ifdef __PS2__
+			snprintf_check(error_message, sizeof(error_message), "Cannot find a required data file: %s or folder: %s\nPress Cross to quit.", filename, foldername);
+			#else
 			snprintf_check(error_message, sizeof(error_message), "Cannot find a required data file: %s or folder: %s\nPress any key to quit.", filename, foldername);
+			#endif
 			if (onscreen_surface_ != NULL && copyprot_dialog != NULL) { // otherwise showmessage will crash
 				showmessage(error_message, 1, &key_test_quit);
 				quit(1);
@@ -555,7 +559,11 @@ chtab_type* load_sprites_from_file(int resource,int palette_bits, int quit_on_er
 			char error_message[256];
 			// Unfortunately we don't know at this point which data file is missing. So we use the name of the last opened DAT file.
 			// It's also possible that the DAT file exists and it just doesn't contain the needed resource.
+			#ifdef __PS2__
+			snprintf_check(error_message, sizeof(error_message), "Can't load sprites from resource %d.\nThe last opened data file is: %s\nPress Cross to quit.", resource, dat_chain_ptr->filename);
+			#else
 			snprintf_check(error_message, sizeof(error_message), "Can't load sprites from resource %d.\nThe last opened data file is: %s\nPress any key to quit.", resource, dat_chain_ptr->filename);
+			#endif
 			showmessage(error_message, 1, &key_test_quit);
 			quit(1);
 		}
@@ -1607,7 +1615,11 @@ void dialog_method_2_frame(dialog_type* dialog) {
 // seg009:0C44
 void show_dialog(const char* text) {
 	char string[256];
+	#ifdef __PS2__
+	snprintf(string, sizeof(string), "%s\n\nPress Cross to continue.", text);
+	#else
 	snprintf(string, sizeof(string), "%s\n\nPress any key to continue.", text);
+	#endif
 	showmessage(string, 1, &key_test_quit);
 }
 
@@ -2589,6 +2601,60 @@ void init_scaling(void) {
 }
 
 #ifdef __PS2__
+typedef struct ps2_screen_settings_file_type {
+	uint32_t magic;
+	byte width;
+	byte height;
+	sbyte x;
+	sbyte y;
+} ps2_screen_settings_file_type;
+
+#define PS2_SCREEN_SETTINGS_MAGIC 0x31503253u
+
+void ps2_apply_screen_adjustment(void) {
+	ps2_screen_width = MIN(MAX(ps2_screen_width, 70), 100);
+	ps2_screen_height = MIN(MAX(ps2_screen_height, 70), 100);
+	ps2_screen_x = MIN(MAX(ps2_screen_x, -15), 15);
+	ps2_screen_y = MIN(MAX(ps2_screen_y, -15), 15);
+	ps2_screen_settings_dirty = 1;
+	need_full_redraw = 1;
+}
+
+void ps2_load_screen_settings(void) {
+	ps2_screen_settings_file_type settings;
+	SDL_RWops* rw = SDL_RWFromFile(locate_save_file("SDLPoP-PS2.video"), "rb");
+	if (rw != NULL) {
+		if (SDL_RWread(rw, &settings, sizeof(settings), 1) == 1 &&
+			settings.magic == PS2_SCREEN_SETTINGS_MAGIC) {
+			ps2_screen_width = settings.width;
+			ps2_screen_height = settings.height;
+			ps2_screen_x = settings.x;
+			ps2_screen_y = settings.y;
+			ps2_apply_screen_adjustment();
+			ps2_screen_settings_dirty = 0;
+		}
+		SDL_RWclose(rw);
+	}
+}
+
+void ps2_save_screen_settings(void) {
+	if (!ps2_screen_settings_dirty) return;
+	ps2_screen_settings_file_type settings = {
+		PS2_SCREEN_SETTINGS_MAGIC,
+		ps2_screen_width,
+		ps2_screen_height,
+		ps2_screen_x,
+		ps2_screen_y
+	};
+	SDL_RWops* rw = SDL_RWFromFile(locate_save_file("SDLPoP-PS2.video"), "wb");
+	if (rw != NULL) {
+		if (SDL_RWwrite(rw, &settings, sizeof(settings), 1) == 1) {
+			ps2_screen_settings_dirty = 0;
+		}
+		SDL_RWclose(rw);
+	}
+}
+
 static void ps2_configure_video_mode(byte mode) {
 	ps2_video_mode = mode ? 1 : 0;
 	if (ps2_video_mode == 1) {
@@ -2669,6 +2735,7 @@ void set_gr_mode(byte grmode) {
 	use_correct_aspect_ratio = 0;
 	use_integer_scaling = 0;
 	scaling_type = 0;
+	ps2_load_screen_settings();
 	// Always boot in the universally visible mode. 480p can be tested from the
 	// pause menu and is reverted automatically if it is not confirmed.
 	ps2_configure_video_mode(0);
@@ -2927,7 +2994,19 @@ void update_screen() {
 		SDL_UpdateTexture(target_texture, NULL, surface->pixels, surface->pitch);
 	}
 	SDL_RenderClear(renderer_);
+	#ifdef __PS2__
+	int output_width = (ps2_video_mode == 1) ? 720 : 640;
+	int output_height = (ps2_video_mode == 1) ? 480 : 224;
+	SDL_Rect destination = {
+		(output_width * (100 - ps2_screen_width)) / 200 + (output_width * ps2_screen_x) / 100,
+		(output_height * (100 - ps2_screen_height)) / 200 + (output_height * ps2_screen_y) / 100,
+		(output_width * ps2_screen_width) / 100,
+		(output_height * ps2_screen_height) / 100
+	};
+	SDL_RenderCopy(renderer_, target_texture, NULL, &destination);
+	#else
 	SDL_RenderCopy(renderer_, target_texture, NULL, NULL);
+	#endif
 	SDL_RenderPresent(renderer_);
 }
 

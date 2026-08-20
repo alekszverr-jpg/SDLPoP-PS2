@@ -26,6 +26,10 @@ launch device, including `mass:`, `host:`, memory card and optical media.
 - After switching to 480p, select **OK** within 10 seconds. If the display
   cannot show the confirmation dialog, the game automatically recreates the
   renderer in 240p.
+- Use **Screen width**, **Screen height**, **Horizontal position** and
+  **Vertical position** in the same menu to fit the picture to a CRT's
+  overscan area. Changes appear immediately and are saved in
+  `SDLPoP-PS2.video` next to the ELF.
 
 Both modes expand the original 320x200 DOS framebuffer over the complete 4:3
 PS2 raster. PS2-specific defaults force sharp nearest-neighbour scaling
@@ -40,10 +44,14 @@ Use writable media if those features are needed.
 ## DualShock 2 controls
 
 - D-pad or left analog stick: move
-- Cross: crouch/climb down
+- Cross: crouch/climb down and confirm menu items
 - Triangle: jump/climb up
 - Square or R1: action, careful step, attack and grab
 - Start or Select: pause menu
+- D-pad Left/Right: change the selected setting
+
+The launch information screen and **Settings > Controls** use these PS2 button
+names instead of the original PC keyboard shortcuts.
 
 ## Current test boundary
 
