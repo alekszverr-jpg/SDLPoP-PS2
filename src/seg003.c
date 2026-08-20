@@ -104,9 +104,12 @@ void play_level(int level_number) {
 		do_startpos();
 		have_sword = /*(level_number != 1)*/ (level_number == 0 || level_number >= custom->have_sword_from_level);
 		find_start_level_door();
+		ps2_boot_log("level: before previous-sound wait");
 		// busy waiting?
 		while (check_sound_playing() && !do_paused()) idle();
+		ps2_boot_log("level: previous-sound wait completed");
 		stop_sounds();
+		ps2_boot_log("level: stop_sounds completed");
 		#ifdef USE_REPLAY
 		if (replaying) replay_restore_level();
 		if (skipping_replay) {
@@ -116,8 +119,14 @@ void play_level(int level_number) {
 				skipping_replay = 0; // resume replay from here
 		}
 		#endif
+		#ifdef __PS2__
+		ps2_trace_frame = 0;
+		#endif
+		PS2_FRAME_TRACE("level: before draw_level_first");
 		draw_level_first();
+		PS2_FRAME_TRACE("level: draw_level_first completed");
 		show_copyprot(0);
+		PS2_FRAME_TRACE("level: entering play_level_2");
 		level_number = play_level_2();
 		// hacked...
 #ifdef USE_COPYPROT
@@ -345,10 +354,14 @@ void test_timings(test_timing_state_type* state) {
 // - The next level if the level was completed.
 int play_level_2() {
 	reset_timer(timer_1);
+	#ifdef __PS2__
+	ps2_trace_frame = 1;
+	#endif
 #ifdef CHECK_TIMING
 	test_timing_state_type test_timing_state = {0};
 #endif
 	while (1) { // main loop
+		PS2_FRAME_TRACE("loop: begin");
 #ifdef USE_QUICKSAVE
 		check_quick_op();
 #endif
@@ -369,7 +382,9 @@ int play_level_2() {
 		guardhp_delta = 0;
 		hitp_delta = 0;
 		timers();
+		PS2_FRAME_TRACE("loop: timers completed");
 		play_frame();
+		PS2_FRAME_TRACE("loop: play_frame completed");
 
 #ifdef USE_REPLAY
 		// At the exact "end of level" frame, preserve the seed to ensure reproducibility,
@@ -385,10 +400,17 @@ int play_level_2() {
 			return current_level;
 		} else {
 			if (next_level == current_level || check_sound_playing()) {
+				PS2_FRAME_TRACE("loop: before draw_game_frame");
 				draw_game_frame();
+				PS2_FRAME_TRACE("loop: draw_game_frame completed");
 				flash_if_hurt();
 				remove_flash_if_hurt();
+				PS2_FRAME_TRACE("loop: before do_simple_wait");
 				do_simple_wait(timer_1);
+				PS2_FRAME_TRACE("loop: do_simple_wait completed");
+				#ifdef __PS2__
+				++ps2_trace_frame;
+				#endif
 			} else {
 				stop_sounds();
 				hitp_beg_lev = hitp_max;

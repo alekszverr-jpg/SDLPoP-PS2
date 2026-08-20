@@ -1921,6 +1921,7 @@ const int digi_samplerate = 44100;
 void stop_digi(void) {
 //	SDL_PauseAudio(1);
 	if (!digi_playing) return;
+	PS2_FRAME_TRACE("audio: stop_digi before SDL_LockAudio");
 	SDL_LockAudio();
 	digi_playing = 0;
 	/*
@@ -1937,6 +1938,7 @@ void stop_digi(void) {
 	digi_remaining_length = 0;
 	digi_remaining_pos = NULL;
 	SDL_UnlockAudio();
+	PS2_FRAME_TRACE("audio: stop_digi completed");
 }
 
 // Decoder for the currently playing OGG sound. (This also holds the playback position.)
@@ -2423,9 +2425,11 @@ sound_buffer_type* convert_digi_sound(sound_buffer_type* digi_buffer) {
 // seg009:74F0
 void play_digi_sound(sound_buffer_type* buffer) {
 	//if (!is_sound_on) return;
+	PS2_FRAME_TRACE("audio: play_digi_sound entered");
 	init_digi();
 	if (digi_unavailable) return;
 	stop_digi();
+	PS2_FRAME_TRACE("audio: play_digi_sound before buffer lock");
 //	stop_sounds();
 	//printf("play_digi_sound(): called\n");
 	if ((buffer->type & 7) != sound_digi_converted) {
@@ -2438,7 +2442,9 @@ void play_digi_sound(sound_buffer_type* buffer) {
 	digi_remaining_length = buffer->converted.length;
 	digi_remaining_pos = digi_buffer;
 	SDL_UnlockAudio();
+	PS2_FRAME_TRACE("audio: play_digi_sound buffer ready");
 	SDL_PauseAudio(0);
+	PS2_FRAME_TRACE("audio: play_digi_sound completed");
 }
 
 void free_sound(sound_buffer_type* buffer) {
@@ -2807,9 +2813,12 @@ void draw_overlay(void) {
 }
 
 void update_screen() {
+	PS2_FRAME_TRACE("render: update_screen begin");
 	draw_overlay();
+	PS2_FRAME_TRACE("render: overlay completed");
 	SDL_Surface* surface = get_final_surface();
 	init_scaling();
+	PS2_FRAME_TRACE("render: scaling initialized");
 	if (scaling_type == 1) {
 		// Make "fuzzy pixels" like DOSBox does:
 		// First scale to double size with nearest-neighbor scaling, then scale to full screen with smooth scaling.
@@ -2828,11 +2837,17 @@ void update_screen() {
 			SDL_UpdateTexture(target_texture, NULL, surface->pixels, surface->pitch);
 		}
 	} else {
+		PS2_FRAME_TRACE("render: before SDL_UpdateTexture");
 		SDL_UpdateTexture(target_texture, NULL, surface->pixels, surface->pitch);
+		PS2_FRAME_TRACE("render: SDL_UpdateTexture completed");
 	}
+	PS2_FRAME_TRACE("render: before SDL_RenderClear");
 	SDL_RenderClear(renderer_);
+	PS2_FRAME_TRACE("render: before SDL_RenderCopy");
 	SDL_RenderCopy(renderer_, target_texture, NULL, NULL);
+	PS2_FRAME_TRACE("render: before SDL_RenderPresent");
 	SDL_RenderPresent(renderer_);
+	PS2_FRAME_TRACE("render: SDL_RenderPresent completed");
 }
 
 // seg009:9289
@@ -3879,11 +3894,22 @@ void do_simple_wait(int timer_index) {
 #ifdef USE_REPLAY
 	if ((replaying && skipping_replay) || is_validate_mode) return;
 #endif
+	PS2_FRAME_TRACE("wait: before update_screen");
 	update_screen();
+	PS2_FRAME_TRACE("wait: update_screen completed");
+	PS2_FRAME_TRACE("wait: entering timer loop");
+	bool traced_first_wait = false;
 	while (! has_timer_stopped(timer_index)) {
+		if (!traced_first_wait) PS2_FRAME_TRACE("wait: before first SDL_Delay");
 		SDL_Delay(1);
+		if (!traced_first_wait) PS2_FRAME_TRACE("wait: before first process_events");
 		process_events();
+		if (!traced_first_wait) {
+			PS2_FRAME_TRACE("wait: first process_events completed");
+			traced_first_wait = true;
+		}
 	}
+	PS2_FRAME_TRACE("wait: timer stopped");
 }
 
 word word_1D63A = 1;

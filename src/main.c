@@ -30,6 +30,8 @@ The authors of this program may be contacted at https://forum.princed.org
 #include <sys/stat.h>
 #include <unistd.h>
 
+int ps2_trace_frame = -1;
+
 // SDL2main calls this weak hook before it initializes the launch-device
 // drivers. Keeping the standard reset sequence here lets us display progress
 // even if the real console stalls before SDL_main is reached.

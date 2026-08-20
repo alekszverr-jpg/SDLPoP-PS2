@@ -958,7 +958,16 @@ void draw_game_frame() {
 		}
 	}
 
+	PS2_FRAME_TRACE("draw: before play_next_sound");
+	#ifdef __PS2__
+	if (ps2_trace_frame >= 0 && ps2_trace_frame < 16) {
+		int next_type = (next_sound >= 0 && sound_pointers[next_sound] != NULL) ? sound_pointers[next_sound]->type : -1;
+		ps2_boot_log("frame %d: sound next=%d type=%d current=%d playing=%d",
+			ps2_trace_frame, next_sound, next_type, current_sound, check_sound_playing());
+	}
+	#endif
 	play_next_sound();
+	PS2_FRAME_TRACE("draw: play_next_sound completed");
 	// Note: texts are identified by their total time!
 	if (text_time_remaining == 1) {
 		// If the text's is about to expire:
