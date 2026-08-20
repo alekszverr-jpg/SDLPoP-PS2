@@ -78,6 +78,8 @@ enum pause_menu_item_ids {
 	SETTINGS_MENU_LEVEL_CUSTOMIZATION,
 	SETTINGS_MENU_BACK,
 	SETTINGS_MENU_CONTROLS,
+	SETTINGS_MENU_PS2_FIXES,
+	SETTINGS_MENU_PS2_MODS,
 };
 
 pause_menu_item_type pause_menu_items[] = {
@@ -121,7 +123,11 @@ pause_menu_item_type settings_menu_items[] = {
 		{.id = SETTINGS_MENU_GENERAL, .text = "GENERAL"},
 		{.id = SETTINGS_MENU_GAMEPLAY, .text = "GAMEPLAY"},
 		{.id = SETTINGS_MENU_VISUALS, .text = "VISUALS"},
+	#ifdef __PS2__
+		{.id = SETTINGS_MENU_MODS, .text = "ADVANCED"},
+	#else
 		{.id = SETTINGS_MENU_MODS, .text = "MODS"},
+	#endif
 		{.id = SETTINGS_MENU_CONTROLS, .text = "CONTROLS"},
 		{.id = SETTINGS_MENU_BACK, .text = "BACK"},
 };
@@ -322,6 +328,8 @@ enum setting_ids {
 	SETTING_KEY_ACTION,
 	SETTING_KEY_ENTER,
 	SETTING_KEY_ESC,
+	SETTING_PS2_ADVANCED_FIXES,
+	SETTING_PS2_ADVANCED_MODS,
 };
 
 typedef struct setting_type {
@@ -339,11 +347,7 @@ typedef struct setting_type {
 } setting_type;
 
 setting_type general_settings[] = {
-	#ifdef __PS2__
-		{.id = SETTING_SHOW_MENU_ON_PAUSE, .style = SETTING_STYLE_TOGGLE, .linked = &enable_pause_menu,
-				.text = "Enable pause menu",
-				.explanation = "Press Start or Select to open the pause menu."},
-	#else
+	#ifndef __PS2__
 		{.id = SETTING_SHOW_MENU_ON_PAUSE, .style = SETTING_STYLE_TOGGLE, .linked = &enable_pause_menu,
 				.text = "Enable pause menu",
 				.explanation = "Show the in-game menu when you pause the game.\n"
@@ -450,13 +454,37 @@ setting_type visuals_settings[] = {
 				.explanation = "Turn flashing on or off."},
 #endif
 #ifdef USE_LIGHTING
+	#ifndef __PS2__
 		{.id = SETTING_ENABLE_LIGHTING, .style = SETTING_STYLE_TOGGLE, .linked = &enable_lighting,
 				.text = "Torch shadows enabled",
 				.explanation = "Darken those parts of the screen which are not near a torch."},
+	#endif
 #endif
 };
 
+#ifdef __PS2__
+NAMES_LIST(ps2_gameplay_profile_names, {"Original DOS", "Recommended",});
+
+static void ps2_set_gameplay_profile(byte profile) {
+	if (profile == 0) {
+		turn_fixes_and_enhancements_on_off(0);
+		return;
+	}
+
+	// Start from SDLPoP's bug-fix set, then leave out optional moves and rule
+	// changes so the recommended PS2 profile stays close to the DOS game.
+	memset(&fixes_saved, 1, sizeof(fixes_saved));
+	fixes_saved.enable_crouch_after_climbing = 0;
+	fixes_saved.enable_freeze_time_during_end_music = 0;
+	fixes_saved.enable_remember_guard_hp = 0;
+	fixes_saved.enable_super_high_jump = 0;
+	fixes_saved.enable_jump_grab = 0;
+	turn_fixes_and_enhancements_on_off(1);
+}
+#endif
+
 setting_type gameplay_settings[] = {
+	#ifndef __PS2__
 		{.id = SETTING_ENABLE_CHEATS, .style = SETTING_STYLE_TOGGLE, .linked = &cheats_enabled,
 				.text = "Enable cheats",
 				.explanation = "Turn cheats on or off."/*"\nAlso, display the CHEATS option on the pause menu."*/},
@@ -465,6 +493,7 @@ setting_type gameplay_settings[] = {
 				.text = "Enable copy protection level",
 				.explanation = "Enable or disable the potions (copy protection) level."},
 #endif
+	#endif
 #ifdef USE_QUICKSAVE
 		{.id = SETTING_ENABLE_QUICKSAVE, .style = SETTING_STYLE_TOGGLE, .linked = &enable_quicksave,
 				.text = "Enable quicksave",
@@ -488,11 +517,20 @@ setting_type gameplay_settings[] = {
 						"To stop, press Ctrl+Tab again."},
 	#endif
 #endif
+	#ifdef __PS2__
+		{.id = SETTING_USE_FIXES_AND_ENHANCEMENTS, .style = SETTING_STYLE_NUMBER,
+				.number_type = SETTING_BYTE, .linked = &use_fixes_and_enhancements, .max = 1,
+				.names_list = &ps2_gameplay_profile_names_list,
+				.text = "Gameplay profile",
+				.explanation = "Original DOS preserves original mechanics and tricks.\n"
+						"Recommended fixes bugs but adds no new moves or rule changes."},
+	#else
 		{.id = SETTING_USE_FIXES_AND_ENHANCEMENTS, .style = SETTING_STYLE_TOGGLE, .linked = &use_fixes_and_enhancements,
 				.text = "Enhanced mode (allow bug fixes)",
 				.explanation = "Turn on game fixes and enhancements.\n"
 						"Below, you can turn individual fixes/enhancements on or off.\n"
 						"NOTE: Some fixes disable 'tricks' that depend on game quirks."},
+	#endif
 		{.id = SETTING_ENABLE_CROUCH_AFTER_CLIMBING, .style = SETTING_STYLE_TOGGLE,
 				.linked = &fixes_saved.enable_crouch_after_climbing, .required = &use_fixes_and_enhancements,
 				.text = "Enable crouching after climbing",
@@ -515,7 +553,11 @@ setting_type gameplay_settings[] = {
 				.linked = &fixes_saved.enable_jump_grab, .required = &use_fixes_and_enhancements,
 				.text = "Enable jump grab",
 				.explanation = "Prince can grab tiles on the floor above while jumping. "
+				#ifdef __PS2__
+						"Hold Square or R1 together with Triangle, without pressing forward."},
+				#else
                                "Hold Shift and up arrow, but not the forward arrow key."},
+				#endif
 		{.id = SETTING_FIX_GATE_SOUNDS, .style = SETTING_STYLE_TOGGLE,
 				.linked = &fixes_saved.fix_gate_sounds, .required = &use_fixes_and_enhancements,
 				.text = "Fix gate sounds bug",
@@ -675,7 +717,7 @@ setting_type gameplay_settings[] = {
 		{.id = SETTING_FIX_REGISTER_QUICK_INPUT, .style = SETTING_STYLE_TOGGLE,
 				.linked = &fixes_saved.fix_register_quick_input, .required = &use_fixes_and_enhancements,
 				.text = "Fix fast inputs",
-				.explanation = "Input is ignored if a button or key is pressed and released between game ticks."},
+				.explanation = "Input is ignored if a control is pressed and released between game ticks."},
 		{.id = SETTING_FIX_TURN_RUNNING_NEAR_WALL, .style = SETTING_STYLE_TOGGLE,
 				.linked = &fixes_saved.fix_turn_running_near_wall, .required = &use_fixes_and_enhancements,
 				.text = "Fix run turning near wall",
@@ -1112,6 +1154,31 @@ setting_type controls_settings[] = {
 				.text = "D-pad Left / Right",
 				.explanation = "Change the selected setting."},
 };
+
+#ifdef __PS2__
+#ifdef USE_QUICKSAVE
+	#define PS2_GAMEPLAY_PRIMARY_COUNT 3
+#else
+	#define PS2_GAMEPLAY_PRIMARY_COUNT 1
+#endif
+
+setting_type advanced_settings[] = {
+		{.id = SETTING_ENABLE_CHEATS, .style = SETTING_STYLE_TOGGLE, .linked = &cheats_enabled,
+				.text = "Enable cheats",
+				.explanation = "Enable the original SDLPoP cheat functions."},
+#ifdef USE_COPYPROT
+		{.id = SETTING_ENABLE_COPYPROT, .style = SETTING_STYLE_TOGGLE, .linked = &enable_copyprot,
+				.text = "Copy protection level",
+				.explanation = "Restore the original manual-based potion challenge."},
+#endif
+		{.id = SETTING_PS2_ADVANCED_FIXES, .style = SETTING_STYLE_TEXT_ONLY,
+				.text = "Detailed bug fixes...",
+				.explanation = "Customize the individual fixes used by the Recommended profile."},
+		{.id = SETTING_PS2_ADVANCED_MODS, .style = SETTING_STYLE_TEXT_ONLY,
+				.text = "Game modifications...",
+				.explanation = "Change rules, levels, events and other modding options."},
+};
+#endif
 #else
 setting_type controls_settings[] = {
 		{.id = SETTING_KEY_LEFT, .style = SETTING_STYLE_KEY, .required = NULL,
@@ -1159,9 +1226,19 @@ typedef struct settings_area_type {
 } settings_area_type;
 
 settings_area_type general_settings_area = { .settings = general_settings, .setting_count = COUNT(general_settings)};
-settings_area_type gameplay_settings_area = { .settings = gameplay_settings, .setting_count = COUNT(gameplay_settings)};
-settings_area_type visuals_settings_area = { .settings = visuals_settings, .setting_count = COUNT(visuals_settings)};
+#ifdef __PS2__
+settings_area_type gameplay_settings_area = { .settings = gameplay_settings, .setting_count = PS2_GAMEPLAY_PRIMARY_COUNT};
+settings_area_type advanced_settings_area = { .settings = advanced_settings, .setting_count = COUNT(advanced_settings)};
+settings_area_type fixes_settings_area = {
+	.settings = gameplay_settings + PS2_GAMEPLAY_PRIMARY_COUNT,
+	.setting_count = COUNT(gameplay_settings) - PS2_GAMEPLAY_PRIMARY_COUNT
+};
 settings_area_type mods_settings_area = { .settings = mods_settings, .setting_count = COUNT(mods_settings)};
+#else
+settings_area_type gameplay_settings_area = { .settings = gameplay_settings, .setting_count = COUNT(gameplay_settings)};
+settings_area_type mods_settings_area = { .settings = mods_settings, .setting_count = COUNT(mods_settings)};
+#endif
+settings_area_type visuals_settings_area = { .settings = visuals_settings, .setting_count = COUNT(visuals_settings)};
 settings_area_type level_settings_area = { .settings = level_settings, .setting_count = COUNT(level_settings)};
 settings_area_type controls_settings_area = { .settings = controls_settings, .setting_count = COUNT(controls_settings)};
 
@@ -1176,11 +1253,21 @@ settings_area_type* get_settings_area(int menu_item_id) {
 		case SETTINGS_MENU_VISUALS:
 			return &visuals_settings_area;
 		case SETTINGS_MENU_MODS:
+			#ifdef __PS2__
+			return &advanced_settings_area;
+			#else
 			return &mods_settings_area;
+			#endif
 		case SETTINGS_MENU_LEVEL_CUSTOMIZATION:
 			return &level_settings_area;
 		case SETTINGS_MENU_CONTROLS:
 			return &controls_settings_area;
+		#ifdef __PS2__
+		case SETTINGS_MENU_PS2_FIXES:
+			return &fixes_settings_area;
+		case SETTINGS_MENU_PS2_MODS:
+			return &mods_settings_area;
+		#endif
 	}
 }
 
@@ -1220,7 +1307,14 @@ void init_menu() {
 
 	init_settings_list(general_settings, COUNT(general_settings));
 	init_settings_list(visuals_settings, COUNT(visuals_settings));
+	#ifdef __PS2__
+	init_settings_list(gameplay_settings, PS2_GAMEPLAY_PRIMARY_COUNT);
+	init_settings_list(gameplay_settings + PS2_GAMEPLAY_PRIMARY_COUNT,
+		COUNT(gameplay_settings) - PS2_GAMEPLAY_PRIMARY_COUNT);
+	init_settings_list(advanced_settings, COUNT(advanced_settings));
+	#else
 	init_settings_list(gameplay_settings, COUNT(gameplay_settings));
+	#endif
 	init_settings_list(mods_settings, COUNT(mods_settings));
 	init_settings_list(level_settings, COUNT(level_settings));
 	init_settings_list(controls_settings, COUNT(controls_settings));
@@ -1312,7 +1406,18 @@ void enter_settings_subsection(int settings_menu_id) {
 
 void leave_settings_subsection(void) {
 	if (active_settings_subsection == SETTINGS_MENU_LEVEL_CUSTOMIZATION) {
+		#ifdef __PS2__
+		enter_settings_subsection(SETTINGS_MENU_PS2_MODS);
+		highlighted_settings_subsection = SETTINGS_MENU_MODS;
+		#else
 		enter_settings_subsection(SETTINGS_MENU_MODS);
+		#endif
+	#ifdef __PS2__
+	} else if (active_settings_subsection == SETTINGS_MENU_PS2_FIXES ||
+			active_settings_subsection == SETTINGS_MENU_PS2_MODS) {
+		enter_settings_subsection(SETTINGS_MENU_MODS);
+		highlighted_settings_subsection = SETTINGS_MENU_MODS;
+	#endif
 	} else {
 		// Go back to the top level of the settings menu.
 		controlled_area = 0;
@@ -1574,7 +1679,9 @@ void increase_setting(setting_type* setting, int old_value) {
 		were_settings_changed = true;
 		set_setting_value(setting, new_value);
 		#ifdef __PS2__
-		if (setting->id == SETTING_PS2_VIDEO_MODE) {
+		if (setting->id == SETTING_USE_FIXES_AND_ENHANCEMENTS) {
+			ps2_set_gameplay_profile((byte)new_value);
+		} else if (setting->id == SETTING_PS2_VIDEO_MODE) {
 			ps2_set_video_mode((byte)new_value);
 			if (new_value == 1) {
 				current_dialog_box = DIALOG_CONFIRM_480P;
@@ -1601,7 +1708,9 @@ void decrease_setting(setting_type* setting, int old_value) {
 		were_settings_changed = true;
 		set_setting_value(setting, new_value);
 		#ifdef __PS2__
-		if (setting->id == SETTING_PS2_VIDEO_MODE) {
+		if (setting->id == SETTING_USE_FIXES_AND_ENHANCEMENTS) {
+			ps2_set_gameplay_profile((byte)new_value);
+		} else if (setting->id == SETTING_PS2_VIDEO_MODE) {
 			ps2_set_video_mode((byte)new_value);
 		} else if (setting->id == SETTING_PS2_SCREEN_WIDTH ||
 				setting->id == SETTING_PS2_SCREEN_HEIGHT ||
@@ -1813,6 +1922,16 @@ void draw_setting(setting_type* setting, rect_type* parent, int* y_offset, int i
 				} else if (setting->id == SETTING_LEVEL_SETTINGS) {
 					play_menu_sound(sound_22_loose_shake_3);
 					current_dialog_box = DIALOG_SELECT_LEVEL;
+				#ifdef __PS2__
+				} else if (setting->id == SETTING_PS2_ADVANCED_FIXES) {
+					play_menu_sound(sound_22_loose_shake_3);
+					enter_settings_subsection(SETTINGS_MENU_PS2_FIXES);
+					highlighted_settings_subsection = SETTINGS_MENU_MODS;
+				} else if (setting->id == SETTING_PS2_ADVANCED_MODS) {
+					play_menu_sound(sound_22_loose_shake_3);
+					enter_settings_subsection(SETTINGS_MENU_PS2_MODS);
+					highlighted_settings_subsection = SETTINGS_MENU_MODS;
+				#endif
 				}
 			}
 

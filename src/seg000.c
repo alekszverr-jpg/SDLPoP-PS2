@@ -68,6 +68,15 @@ void pop_main() {
 #ifdef USE_MENU
 	load_ingame_settings();
 #endif
+	#ifdef __PS2__
+	// These desktop-oriented switches are intentionally hidden in the console
+	// menu. Keep their persisted values from disabling the PS2 pause UI or
+	// enabling the experimental lighting renderer.
+	enable_pause_menu = 1;
+	#ifdef USE_LIGHTING
+	enable_lighting = 0;
+	#endif
+	#endif
 	if (check_param("mute")) is_sound_on = 0;
 	turn_sound_on_off((is_sound_on != 0) * 15); // Turn off sound/music if those options were set.
 

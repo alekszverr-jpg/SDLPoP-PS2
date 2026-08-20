@@ -53,6 +53,20 @@ Use writable media if those features are needed.
 The launch information screen and **Settings > Controls** use these PS2 button
 names instead of the original PC keyboard shortcuts.
 
+## Console settings layout
+
+- **Gameplay > Gameplay profile > Original DOS** preserves the original DOS
+  mechanics and tricks.
+- **Recommended** enables SDLPoP's bug fixes while leaving optional moves and
+  rule changes disabled.
+- **Advanced > Detailed bug fixes** exposes every individual fix for users who
+  want a custom profile.
+- Cheats, copy protection and the full game/level modification tools are kept
+  under **Advanced** instead of the normal gameplay menu.
+- The experimental torch-shadow renderer is hidden on PS2. Fade and flash
+  controls remain available because they are part of the normal presentation
+  and accessibility options.
+
 ## Current test boundary
 
 GitHub Actions is configured to verify that the MIPS ELF links against the PS2
