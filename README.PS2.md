@@ -38,8 +38,9 @@ the SDL PS2 backend. The backend is also patched to use the GS neutral texture
 modulation value, preventing the washed-out, approximately double-bright image
 produced by an unmodified SDL 2.32 PS2 renderer.
 
-The game writes normal saves, Hall of Fame data and quicksaves next to the ELF.
-Use writable media if those features are needed.
+The game writes normal saves, Hall of Fame data, quicksaves, menu settings and
+screen calibration next to the ELF. Use writable media if those features are
+needed.
 
 ## DualShock 2 controls
 
@@ -67,9 +68,11 @@ names instead of the original PC keyboard shortcuts.
   controls remain available because they are part of the normal presentation
   and accessibility options.
 
-## Current test boundary
+## Test status
 
-GitHub Actions is configured to verify that the MIPS ELF links against the PS2
-versions of SDL2 and SDL2_image and to package all runtime data. Rendering,
-audio timing, controller behaviour and saves still need a smoke test in PCSX2
-followed by a test on a real PS2.
+GitHub Actions verifies that the MIPS ELF links against the PS2 versions of
+SDL2 and SDL2_image and packages all runtime data. Boot, gameplay, audio,
+DualShock 2 input, 240p output, screen calibration and menu settings have been
+tested on a real PS2. Normal save/load, quicksave/quickload, Hall of Fame writes,
+480p confirmation on a compatible display and quitting back to the launcher
+remain explicit hardware smoke-test items.

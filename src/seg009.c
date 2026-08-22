@@ -135,6 +135,9 @@ const char* find_first_file_match(char* dst, int size, char* format, const char*
 }
 
 const char* locate_save_file_(const char* filename, char* dst, int size) {
+	// Always leave the caller with a valid relative fallback. On platforms
+	// without a writable home directory the loop below may not find a target.
+	snprintf_check(dst, size, "%s", filename);
 	find_exe_dir();
 #if defined WIN32 || _WIN32 || WIN64 || _WIN64
 	snprintf_check(dst, size, "%s/%s", exe_dir, filename);
