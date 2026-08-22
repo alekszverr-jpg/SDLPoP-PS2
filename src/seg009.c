@@ -2262,9 +2262,9 @@ void init_digi() {
 	desired->format = desired_audioformat;
 	desired->channels = 2;
 	#ifdef __PS2__
-	// 512 frames at 12 kHz have the same 42.7 ms duration as 1024 at 24 kHz,
-	// while requiring only half as many real-time OPL calculations.
-	desired->samples = 512;
+	// A longer 85.3 ms block absorbs the short workload spikes caused by dense
+	// MIDI passages while keeping the sustained OPL workload unchanged.
+	desired->samples = 1024;
 	#else
 	desired->samples = 1024;
 	#endif
