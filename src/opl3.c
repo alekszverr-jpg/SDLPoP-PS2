@@ -499,7 +499,20 @@ static void OPL3_EnvelopeCalc(opl3_slot *slot)
     slot->eg_inc = inc;
     slot->eg_out = slot->eg_rout + (slot->reg_tl << 2)
                  + (slot->eg_ksl >> kslshift[slot->reg_ksl]) + *slot->trem;
+#ifdef __PS2__
+    /* Direct dispatch lets GCC inline the hot envelope paths on the R5900.
+       The function-pointer table prevents that optimization. */
+    switch (slot->eg_gen)
+    {
+    case envelope_gen_num_attack:  OPL3_EnvelopeGenAttack(slot); break;
+    case envelope_gen_num_decay:   OPL3_EnvelopeGenDecay(slot); break;
+    case envelope_gen_num_sustain: OPL3_EnvelopeGenSustain(slot); break;
+    case envelope_gen_num_release: OPL3_EnvelopeGenRelease(slot); break;
+    default:                       OPL3_EnvelopeGenOff(slot); break;
+    }
+#else
     envelope_gen[slot->eg_gen](slot);
+#endif
 }
 
 static void OPL3_EnvelopeKeyOn(opl3_slot *slot, Bit8u type)
@@ -640,7 +653,23 @@ static void OPL3_SlotWriteE0(opl3_slot *slot, Bit8u data)
 
 static void OPL3_SlotGeneratePhase(opl3_slot *slot, Bit16u phase)
 {
+#ifdef __PS2__
+    /* As above, keep the exact waveform functions but avoid an indirect call
+       for every active operator and native OPL sample. */
+    switch (slot->reg_wf)
+    {
+    case 1: slot->out = OPL3_EnvelopeCalcSin1(phase, slot->eg_out); break;
+    case 2: slot->out = OPL3_EnvelopeCalcSin2(phase, slot->eg_out); break;
+    case 3: slot->out = OPL3_EnvelopeCalcSin3(phase, slot->eg_out); break;
+    case 4: slot->out = OPL3_EnvelopeCalcSin4(phase, slot->eg_out); break;
+    case 5: slot->out = OPL3_EnvelopeCalcSin5(phase, slot->eg_out); break;
+    case 6: slot->out = OPL3_EnvelopeCalcSin6(phase, slot->eg_out); break;
+    case 7: slot->out = OPL3_EnvelopeCalcSin7(phase, slot->eg_out); break;
+    default: slot->out = OPL3_EnvelopeCalcSin0(phase, slot->eg_out); break;
+    }
+#else
     slot->out = envelope_sin[slot->reg_wf](phase, slot->eg_out);
+#endif
 }
 
 static void OPL3_SlotGenerate(opl3_slot *slot)

@@ -2262,9 +2262,8 @@ void init_digi() {
 	desired->format = desired_audioformat;
 	desired->channels = 2;
 	#ifdef __PS2__
-	// A longer 85.3 ms block absorbs the short workload spikes caused by dense
-	// MIDI passages while keeping the sustained OPL workload unchanged.
-	desired->samples = 1024;
+	// The SDL PS2 backend feeds audsrv most reliably at its native block size.
+	desired->samples = 512;
 	#else
 	desired->samples = 1024;
 	#endif
