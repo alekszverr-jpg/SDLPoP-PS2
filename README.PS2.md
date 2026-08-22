@@ -44,10 +44,11 @@ needed.
 
 The PS2 build mixes audio at 12 kHz and lets audsrv perform its exact 4x
 conversion to the SPU2's native 48 kHz output. This quarters the real-time OPL
-synthesis load without changing music pitch or tempo. It also skips the unused
-second OPL3 voice bank: Prince of Persia music uses only the nine compatible
-OPL2 voices in the first bank. PS2-specific direct dispatch in the hot envelope
-and waveform paths avoids costly indirect calls on the R5900.
+synthesis load without changing music pitch or tempo. Music is rendered by the
+bit-exact, performance-optimized Nuked-OPL3-fast core with compatibility flags
+for the previously bundled Nuked OPL3 1.7.4 behaviour. Prince of Persia uses
+only the nine OPL2-compatible voices, so the fast core can cheaply skip the
+unused and silent operators during less dense passages.
 
 ## DualShock 2 controls
 
