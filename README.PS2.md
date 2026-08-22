@@ -44,7 +44,9 @@ needed.
 
 The PS2 build mixes audio at 24 kHz and lets audsrv perform its exact 2x
 conversion to the SPU2's native 48 kHz output. This halves the real-time OPL
-synthesis load without changing music pitch or tempo.
+synthesis load without changing music pitch or tempo. It also skips the unused
+second OPL3 voice bank: Prince of Persia music uses only the nine compatible
+OPL2 voices in the first bank.
 
 ## DualShock 2 controls
 

@@ -1121,7 +1121,12 @@ void OPL3_Generate(opl3_chip *chip, Bit16s *buf)
     }
 
     mixed = 0;
+#ifdef __PS2__
+    /* SDLPoP uses only the nine OPL2-compatible voices in the first bank. */
+    for (ii = 0; ii < 9; ii++)
+#else
     for (ii = 0; ii < 18; ii++)
+#endif
     {
         const opl3_channel *chan = &chip->channel[ii];
         Bit16s * const *chanout = chan->out;
@@ -1150,6 +1155,12 @@ void OPL3_Generate(opl3_chip *chip, Bit16s *buf)
 
     buf[0] = OPL3_ClipSample(chip->mixbuff[0]);
 
+#ifdef __PS2__
+    /* PoP never writes to the second OPL3 bank and enables identical L/R
+       output for every voice. Avoid rendering 18 silent operators. */
+    chip->mixbuff[1] = chip->mixbuff[0];
+    buf[1] = buf[0];
+#else
     for (ii = 18; ii < 33; ii++)
     {
         OPL3_SlotCalcFB(&chip->slot[ii]);
@@ -1176,6 +1187,7 @@ void OPL3_Generate(opl3_chip *chip, Bit16s *buf)
         OPL3_EnvelopeCalc(&chip->slot[ii]);
         OPL3_SlotGenerate(&chip->slot[ii]);
     }
+#endif
 
     OPL3_NoiseGenerate(chip);
 
