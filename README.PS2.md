@@ -42,6 +42,10 @@ The game writes normal saves, Hall of Fame data, quicksaves, menu settings and
 screen calibration next to the ELF. Use writable media if those features are
 needed.
 
+The PS2 build mixes audio at 24 kHz and lets audsrv perform its exact 2x
+conversion to the SPU2's native 48 kHz output. This halves the real-time OPL
+synthesis load without changing music pitch or tempo.
+
 ## DualShock 2 controls
 
 - D-pad or left analog stick: move
@@ -72,8 +76,9 @@ names instead of the original PC keyboard shortcuts.
 ## Test status
 
 GitHub Actions verifies that the MIPS ELF links against the PS2 versions of
-SDL2 and SDL2_image and packages all runtime data. Boot, gameplay, audio,
+SDL2 and SDL2_image and packages all runtime data. Boot, gameplay,
 DualShock 2 input, 240p output, screen calibration and menu settings have been
 tested on a real PS2. Save paths, quicksave/quickload and exiting to PS2 Browser
-have also been verified on hardware. Hall of Fame writes and 480p confirmation
-on a compatible display remain explicit hardware smoke-test items.
+have also been verified on hardware. Audio timing after the lower-load mixer
+change, Hall of Fame writes and 480p confirmation on a compatible display remain
+explicit hardware smoke-test items.

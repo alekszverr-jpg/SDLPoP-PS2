@@ -124,7 +124,9 @@ if(PS2)
     find_package(SDL2 CONFIG REQUIRED)
     find_package(SDL2_image CONFIG REQUIRED)
     set_target_properties(prince PROPERTIES OUTPUT_NAME "BOOT" SUFFIX ".ELF")
-    target_compile_options(prince PRIVATE -O2 -G0)
+    # Software OPL synthesis runs in SDL's real-time audio thread. Optimize it
+    # aggressively so the EE can keep the audsrv ring buffer filled.
+    target_compile_options(prince PRIVATE -O3 -G0)
     target_link_libraries(prince PRIVATE
         SDL2_image::SDL2_image-static
         SDL2::SDL2main

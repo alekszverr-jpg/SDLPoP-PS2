@@ -22,6 +22,10 @@ The authors of this program may be contacted at https://forum.princed.org
 #include <time.h>
 #include <errno.h>
 
+#ifdef __PS2__
+static void ps2_audio_log_stats(void);
+#endif
+
 #ifdef _WIN32
 #include <windows.h>
 #include <wchar.h>
@@ -364,6 +368,9 @@ void quit(int exit_code) {
 
 // seg009:0C90
 void restore_stuff() {
+	#ifdef __PS2__
+	ps2_audio_log_stats();
+	#endif
 	SDL_Quit();
 }
 
@@ -1926,9 +1933,9 @@ int digi_remaining_length = 0;
 SDL_AudioSpec* digi_audiospec = NULL;
 // The desired samplerate. Everything will be resampled to this.
 #ifdef __PS2__
-// Match the native SPU2 rate so audsrv does not resample the software OPL3
-// output. The PS2 SDL backend is patched to use a larger real-time buffer.
-const int digi_samplerate = 48000;
+// Generate half as many software OPL frames on the EE. audsrv has a dedicated
+// 24 kHz stereo path which duplicates each frame exactly for the 48 kHz SPU2.
+const int digi_samplerate = 24000;
 #else
 const int digi_samplerate = 44100;
 #endif
@@ -2119,7 +2126,33 @@ void ogg_callback(void *userdata, Uint8 *stream, int len) {
 int audio_speed = 1; // =1 normally, >1 during fast forwarding
 #endif
 
+#ifdef __PS2__
+static Uint64 ps2_audio_callback_count;
+static Uint64 ps2_audio_callback_work_us;
+static Uint64 ps2_audio_callback_budget_us;
+static Uint64 ps2_audio_callback_max_us;
+static Uint64 ps2_audio_callback_overruns;
+
+static void ps2_audio_log_stats(void) {
+	if (digi_audiospec == NULL || ps2_audio_callback_count == 0) return;
+	SDL_LockAudio();
+	Uint64 callback_count = ps2_audio_callback_count;
+	Uint64 work_us = ps2_audio_callback_work_us;
+	Uint64 budget_us = ps2_audio_callback_budget_us;
+	Uint64 max_us = ps2_audio_callback_max_us;
+	Uint64 overruns = ps2_audio_callback_overruns;
+	SDL_UnlockAudio();
+	unsigned int load_percent = budget_us > 0 ? (unsigned int)((work_us * 100) / budget_us) : 0;
+	ps2_boot_log("audio: callbacks=%llu load=%u%% max=%lluus overruns=%llu",
+		(unsigned long long)callback_count, load_percent,
+		(unsigned long long)max_us, (unsigned long long)overruns);
+}
+#endif
+
 void audio_callback(void* userdata, Uint8* stream_orig, int len_orig) {
+	#ifdef __PS2__
+	Uint64 callback_started = SDL_GetPerformanceCounter();
+	#endif
 
 	Uint8* stream;
 	int len;
@@ -2186,6 +2219,18 @@ void audio_callback(void* userdata, Uint8* stream_orig, int len_orig) {
 	}
 #endif
 
+	#ifdef __PS2__
+	Uint64 performance_frequency = SDL_GetPerformanceFrequency();
+	Uint64 callback_us = (SDL_GetPerformanceCounter() - callback_started) * 1000000ULL / performance_frequency;
+	int bytes_per_frame = sizeof(short) * digi_audiospec->channels;
+	Uint64 frames = bytes_per_frame > 0 ? (Uint64)len_orig / (Uint64)bytes_per_frame : 0;
+	Uint64 budget_us = frames * 1000000ULL / (Uint64)digi_audiospec->freq;
+	++ps2_audio_callback_count;
+	ps2_audio_callback_work_us += callback_us;
+	ps2_audio_callback_budget_us += budget_us;
+	ps2_audio_callback_max_us = MAX(ps2_audio_callback_max_us, callback_us);
+	if (callback_us > budget_us) ++ps2_audio_callback_overruns;
+	#endif
 }
 
 int digi_unavailable = 0;
@@ -2218,14 +2263,32 @@ void init_digi() {
 	desired->samples = 1024;
 	desired->callback = audio_callback;
 	desired->userdata = NULL;
+	#ifdef __PS2__
+	SDL_AudioSpec *obtained = (SDL_AudioSpec *)malloc(sizeof(SDL_AudioSpec));
+	memset(obtained, 0, sizeof(SDL_AudioSpec));
+	if (SDL_OpenAudio(desired, obtained) != 0) {
+	#else
 	if (SDL_OpenAudio(desired, NULL) != 0) {
+	#endif
 		sdlperror("init_digi: SDL_OpenAudio");
 		//quit(1);
 		digi_unavailable = 1;
+		#ifdef __PS2__
+		free(obtained);
+		#endif
+		free(desired);
 		return;
 	}
 	//SDL_PauseAudio(0);
+	#ifdef __PS2__
+	digi_audiospec = obtained;
+	ps2_boot_log("audio: requested=%dHz/%dch/%u samples, obtained=%dHz/%dch/%u samples format=0x%04x",
+		desired->freq, desired->channels, desired->samples,
+		obtained->freq, obtained->channels, obtained->samples, obtained->format);
+	free(desired);
+	#else
 	digi_audiospec = desired;
+	#endif
 }
 
 const int sound_channel = 0;

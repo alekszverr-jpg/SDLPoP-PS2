@@ -4,7 +4,7 @@ endif()
 
 file(READ "${SDL_PS2_AUDIO_SOURCE}" SDL_PS2_AUDIO_CONTENT)
 set(SDL_PS2_AUDIO_OLD "this->spec.samples = 512;")
-set(SDL_PS2_AUDIO_NEW "this->spec.samples = 2048;")
+set(SDL_PS2_AUDIO_NEW "this->spec.samples = 1024;")
 string(FIND "${SDL_PS2_AUDIO_CONTENT}" "${SDL_PS2_AUDIO_OLD}" SDL_PS2_AUDIO_POSITION)
 
 if(SDL_PS2_AUDIO_POSITION EQUAL -1)
