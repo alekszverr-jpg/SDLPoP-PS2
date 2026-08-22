@@ -48,6 +48,7 @@ needed.
 - Cross: crouch/climb down and confirm menu items
 - Triangle: jump/climb up
 - Square or R1: action, careful step, attack and grab
+- Circle: go back or cancel in menus
 - Start or Select: pause menu
 - D-pad Left/Right: change the selected setting
 
@@ -73,6 +74,6 @@ names instead of the original PC keyboard shortcuts.
 GitHub Actions verifies that the MIPS ELF links against the PS2 versions of
 SDL2 and SDL2_image and packages all runtime data. Boot, gameplay, audio,
 DualShock 2 input, 240p output, screen calibration and menu settings have been
-tested on a real PS2. Normal save/load, quicksave/quickload, Hall of Fame writes,
-480p confirmation on a compatible display and quitting back to the launcher
-remain explicit hardware smoke-test items.
+tested on a real PS2. Save paths, quicksave/quickload and exiting to PS2 Browser
+have also been verified on hardware. Hall of Fame writes and 480p confirmation
+on a compatible display remain explicit hardware smoke-test items.

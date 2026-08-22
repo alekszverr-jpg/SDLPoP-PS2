@@ -1147,6 +1147,9 @@ setting_type controls_settings[] = {
 		{.id = SETTING_KEY_ACTION, .style = SETTING_STYLE_TEXT_ONLY,
 				.text = "Square / R1",
 				.explanation = "Careful step, grab, attack and other actions."},
+		{.id = SETTING_KEY_JUMP_LEFT, .style = SETTING_STYLE_TEXT_ONLY,
+				.text = "Circle",
+				.explanation = "Go back or cancel in menus."},
 		{.id = SETTING_KEY_ESC, .style = SETTING_STYLE_TEXT_ONLY,
 				.text = "Start / Select",
 				.explanation = "Open or close the pause menu."},
@@ -1467,7 +1470,11 @@ void pause_menu_clicked(pause_menu_item_type* item) {
 			break;
 		case PAUSE_MENU_QUIT_GAME:
 			current_dialog_box = DIALOG_CONFIRM_QUIT;
+			#ifdef __PS2__
+			current_dialog_text = "Exit to PS2 Browser?";
+			#else
 			current_dialog_text = "Quit SDLPoP?";
+			#endif
 			break;
 		case SETTINGS_MENU_GENERAL:
 		case SETTINGS_MENU_GAMEPLAY:

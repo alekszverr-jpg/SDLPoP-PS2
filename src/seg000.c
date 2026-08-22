@@ -2446,6 +2446,7 @@ const char* splash_text_2 =
 		"Triangle: jump / climb up\n"
 		"Cross: crouch / climb down / confirm\n"
 		"Square or R1: action / grab / attack\n"
+		"Circle: back / cancel in menus\n"
 		"Start or Select: pause menu\n"
 		"\n"
 		"Screen size and 240p/480p are in\n"

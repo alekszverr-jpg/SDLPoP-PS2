@@ -3913,6 +3913,7 @@ void process_events() {
 						case 11:
 						case 15: joy_button_states[JOYINPUT_X] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; // R1/Square: action
 						case 12: joy_button_states[JOYINPUT_Y] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; // Triangle: up
+						case 13: joy_button_states[JOYINPUT_B] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; // Circle: back/cancel
 						case 14: joy_button_states[JOYINPUT_A] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; // Cross: down
 						default: break;
 					}
@@ -3933,6 +3934,7 @@ void process_events() {
 						case 11:
 						case 15: joy_button_states[JOYINPUT_X] &= ~KEYSTATE_HELD; break;
 						case 12: joy_button_states[JOYINPUT_Y] &= ~KEYSTATE_HELD; break;
+						case 13: joy_button_states[JOYINPUT_B] &= ~KEYSTATE_HELD; break;
 						case 14: joy_button_states[JOYINPUT_A] &= ~KEYSTATE_HELD; break;
 						default: break;
 					}
