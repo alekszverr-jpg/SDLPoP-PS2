@@ -1933,9 +1933,10 @@ int digi_remaining_length = 0;
 SDL_AudioSpec* digi_audiospec = NULL;
 // The desired samplerate. Everything will be resampled to this.
 #ifdef __PS2__
-// Generate half as many software OPL frames on the EE. audsrv has a dedicated
-// 24 kHz stereo path which duplicates each frame exactly for the 48 kHz SPU2.
-const int digi_samplerate = 24000;
+// Keep software OPL synthesis within the EE's real-time audio budget. audsrv
+// has a dedicated 12 kHz stereo path which duplicates each frame exactly four
+// times for the SPU2's native 48 kHz output, so tempo and pitch stay unchanged.
+const int digi_samplerate = 12000;
 #else
 const int digi_samplerate = 44100;
 #endif
@@ -2260,7 +2261,13 @@ void init_digi() {
 	desired->freq = digi_samplerate; //buffer->digi.sample_rate;
 	desired->format = desired_audioformat;
 	desired->channels = 2;
+	#ifdef __PS2__
+	// 512 frames at 12 kHz have the same 42.7 ms duration as 1024 at 24 kHz,
+	// while requiring only half as many real-time OPL calculations.
+	desired->samples = 512;
+	#else
 	desired->samples = 1024;
+	#endif
 	desired->callback = audio_callback;
 	desired->userdata = NULL;
 	#ifdef __PS2__
