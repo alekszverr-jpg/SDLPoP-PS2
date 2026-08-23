@@ -69,6 +69,14 @@ static int mixing_freq;
 static sbyte midi_semitones_higher;
 static float current_midi_tempo_modifier;
 
+#ifdef __PS2__
+/* Per-callback counters sampled by the lightweight profiler in seg009.c. */
+unsigned int ps2_midi_last_event_count;
+unsigned int ps2_midi_last_fragment_count;
+unsigned int ps2_midi_last_generated_frames;
+unsigned int ps2_midi_last_active_voices;
+#endif
+
 // Tempo adjustments for specific songs:
 // * PV scene, with 'Story 3 Jaffar enters':
 //   Speed must be exactly right, otherwise it will not line up with the flashing animation in the cutscene.
@@ -515,6 +523,12 @@ static void process_midi_event(midi_event_type* event) {
 
 void midi_callback(void *userdata, Uint8 *stream, int len) {
 	if (!midi_playing || len <= 0) return;
+	#ifdef __PS2__
+	ps2_midi_last_event_count = 0;
+	ps2_midi_last_fragment_count = 0;
+	ps2_midi_last_generated_frames = 0;
+	ps2_midi_last_active_voices = 0;
+	#endif
 	// Reuse one callback-local buffer. Allocating and freeing every MIDI
 	// fragment can starve short real-time audio buffers on slower targets.
 	short* temp_buffer = alloca(len);
@@ -528,6 +542,10 @@ void midi_callback(void *userdata, Uint8 *stream, int len) {
 			int available_frames = (int)(((advance_us * mixing_freq) + ONE_SECOND_IN_US - 1) / ONE_SECOND_IN_US); // round up.
 			int advance_frames = MIN(available_frames, frames_needed);
 			advance_us = advance_frames * ONE_SECOND_IN_US / mixing_freq; // recalculate, in case the rounding up increased this.
+			#ifdef __PS2__
+			++ps2_midi_last_fragment_count;
+			ps2_midi_last_generated_frames += (unsigned int)advance_frames;
+			#endif
 			OPL3_GenerateStream(&opl_chip, temp_buffer, advance_frames);
 			if (is_sound_on && enable_music) {
 				for (int sample = 0; sample < advance_frames * 2; ++sample) {
@@ -560,6 +578,9 @@ void midi_callback(void *userdata, Uint8 *stream, int len) {
 					if (events_left > 0) {
 						midi_event_type* event = &track->events[track->event_index];
 						track->event_index++;
+						#ifdef __PS2__
+						++ps2_midi_last_event_count;
+						#endif
 //						print_midi_event(track_index, track->event_index-1, event);
 						process_midi_event(event);
 
@@ -606,6 +627,11 @@ void midi_callback(void *userdata, Uint8 *stream, int len) {
 			}
 		}
 	}
+	#ifdef __PS2__
+	for (int voice = 0; voice < NUM_OPL_VOICES; ++voice) {
+		if (voice_note[voice] != 0) ++ps2_midi_last_active_voices;
+	}
+	#endif
 }
 
 

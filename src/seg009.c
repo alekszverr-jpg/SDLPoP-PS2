@@ -2133,6 +2133,17 @@ static Uint64 ps2_audio_callback_work_us;
 static Uint64 ps2_audio_callback_budget_us;
 static Uint64 ps2_audio_callback_max_us;
 static Uint64 ps2_audio_callback_overruns;
+static Uint64 ps2_audio_midi_work_us;
+static Uint64 ps2_audio_midi_max_us;
+static unsigned int ps2_audio_peak_midi_events;
+static unsigned int ps2_audio_peak_midi_fragments;
+static unsigned int ps2_audio_peak_midi_frames;
+static unsigned int ps2_audio_peak_midi_voices;
+
+extern unsigned int ps2_midi_last_event_count;
+extern unsigned int ps2_midi_last_fragment_count;
+extern unsigned int ps2_midi_last_generated_frames;
+extern unsigned int ps2_midi_last_active_voices;
 
 static void ps2_audio_log_stats(void) {
 	if (digi_audiospec == NULL || ps2_audio_callback_count == 0) return;
@@ -2142,17 +2153,32 @@ static void ps2_audio_log_stats(void) {
 	Uint64 budget_us = ps2_audio_callback_budget_us;
 	Uint64 max_us = ps2_audio_callback_max_us;
 	Uint64 overruns = ps2_audio_callback_overruns;
+	Uint64 midi_work_us = ps2_audio_midi_work_us;
+	Uint64 midi_max_us = ps2_audio_midi_max_us;
+	unsigned int peak_events = ps2_audio_peak_midi_events;
+	unsigned int peak_fragments = ps2_audio_peak_midi_fragments;
+	unsigned int peak_frames = ps2_audio_peak_midi_frames;
+	unsigned int peak_voices = ps2_audio_peak_midi_voices;
 	SDL_UnlockAudio();
 	unsigned int load_percent = budget_us > 0 ? (unsigned int)((work_us * 100) / budget_us) : 0;
+	unsigned int midi_load_percent = budget_us > 0 ? (unsigned int)((midi_work_us * 100) / budget_us) : 0;
 	ps2_boot_log("audio: callbacks=%llu load=%u%% max=%lluus overruns=%llu",
 		(unsigned long long)callback_count, load_percent,
 		(unsigned long long)max_us, (unsigned long long)overruns);
+	ps2_boot_log("audio-midi: load=%u%% max=%lluus peak_events=%u fragments=%u frames=%u voices=%u",
+		midi_load_percent, (unsigned long long)midi_max_us, peak_events,
+		peak_fragments, peak_frames, peak_voices);
 }
 #endif
 
 void audio_callback(void* userdata, Uint8* stream_orig, int len_orig) {
 	#ifdef __PS2__
 	Uint64 callback_started = SDL_GetPerformanceCounter();
+	Uint64 midi_ticks = 0;
+	unsigned int midi_events = 0;
+	unsigned int midi_fragments = 0;
+	unsigned int midi_frames = 0;
+	unsigned int midi_voices = 0;
 	#endif
 
 	Uint8* stream;
@@ -2177,7 +2203,17 @@ void audio_callback(void* userdata, Uint8* stream_orig, int len_orig) {
 	// Note: music sounds and digi sounds are allowed to play simultaneously (will be blended together)
 	// I.e., digi sounds and music will not cut each other short.
 	if (midi_playing) {
+		#ifdef __PS2__
+		Uint64 midi_started = SDL_GetPerformanceCounter();
+		#endif
 		midi_callback(userdata, stream, len);
+		#ifdef __PS2__
+		midi_ticks = SDL_GetPerformanceCounter() - midi_started;
+		midi_events = ps2_midi_last_event_count;
+		midi_fragments = ps2_midi_last_fragment_count;
+		midi_frames = ps2_midi_last_generated_frames;
+		midi_voices = ps2_midi_last_active_voices;
+		#endif
 	} else if (ogg_playing) {
 		ogg_callback(userdata, stream, len);
 	}
@@ -2223,13 +2259,22 @@ void audio_callback(void* userdata, Uint8* stream_orig, int len_orig) {
 	#ifdef __PS2__
 	Uint64 performance_frequency = SDL_GetPerformanceFrequency();
 	Uint64 callback_us = (SDL_GetPerformanceCounter() - callback_started) * 1000000ULL / performance_frequency;
+	Uint64 midi_us = midi_ticks * 1000000ULL / performance_frequency;
 	int bytes_per_frame = sizeof(short) * digi_audiospec->channels;
 	Uint64 frames = bytes_per_frame > 0 ? (Uint64)len_orig / (Uint64)bytes_per_frame : 0;
 	Uint64 budget_us = frames * 1000000ULL / (Uint64)digi_audiospec->freq;
 	++ps2_audio_callback_count;
 	ps2_audio_callback_work_us += callback_us;
 	ps2_audio_callback_budget_us += budget_us;
-	ps2_audio_callback_max_us = MAX(ps2_audio_callback_max_us, callback_us);
+	ps2_audio_midi_work_us += midi_us;
+	ps2_audio_midi_max_us = MAX(ps2_audio_midi_max_us, midi_us);
+	if (callback_us > ps2_audio_callback_max_us) {
+		ps2_audio_callback_max_us = callback_us;
+		ps2_audio_peak_midi_events = midi_events;
+		ps2_audio_peak_midi_fragments = midi_fragments;
+		ps2_audio_peak_midi_frames = midi_frames;
+		ps2_audio_peak_midi_voices = midi_voices;
+	}
 	if (callback_us > budget_us) ++ps2_audio_callback_overruns;
 	#endif
 }

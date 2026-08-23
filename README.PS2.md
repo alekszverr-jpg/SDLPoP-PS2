@@ -43,11 +43,11 @@ screen calibration next to the ELF. Use writable media if those features are
 needed.
 
 The PS2 build mixes audio at 12 kHz and lets audsrv perform its exact 4x
-conversion to the SPU2's native 48 kHz output. This quarters the real-time OPL
-synthesis load without changing music pitch or tempo. It also skips the unused
+conversion to the SPU2's native 48 kHz output. This reduces the output and
+mixing workload without changing music pitch or tempo. It also skips the unused
 second OPL3 voice bank: Prince of Persia music uses only the nine compatible
-OPL2 voices in the first bank. PS2-specific direct dispatch in the hot envelope
-and waveform paths avoids costly indirect calls on the R5900.
+OPL2 voices in the first bank. The exit log includes callback and MIDI workload
+statistics for diagnosing real-time audio performance.
 
 ## DualShock 2 controls
 
