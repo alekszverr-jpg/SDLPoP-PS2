@@ -4016,7 +4016,7 @@ void process_events() {
 #ifdef __PS2__
 					// SDL's PS2 backend exposes libpad bit positions as joystick
 					// buttons: Select, L3, R3, Start, Up, Right, Down, Left,
-					// L2, R2, L1, R1, Triangle, Circle, Cross, Square.
+					// L2, R1, L1, R2, Triangle, Circle, Cross, Square.
 					switch (event.jbutton.button) {
 						case 0: joy_button_states[JOYINPUT_BACK] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; last_key_scancode = SDL_SCANCODE_BACKSPACE; break;
 						case 3: joy_button_states[JOYINPUT_START] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; last_key_scancode = SDL_SCANCODE_BACKSPACE; break;
@@ -4024,7 +4024,7 @@ void process_events() {
 						case 5: joy_button_states[JOYINPUT_DPAD_RIGHT] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break;
 						case 6: joy_button_states[JOYINPUT_DPAD_DOWN] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break;
 						case 7: joy_button_states[JOYINPUT_DPAD_LEFT] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break;
-						case 11:
+						case 9:
 						case 15: joy_button_states[JOYINPUT_X] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; // R1/Square: action
 						case 12: joy_button_states[JOYINPUT_Y] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; // Triangle: up
 						case 13: joy_button_states[JOYINPUT_B] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; // Circle: back/cancel
@@ -4045,7 +4045,7 @@ void process_events() {
 						case 5: joy_button_states[JOYINPUT_DPAD_RIGHT] &= ~KEYSTATE_HELD; break;
 						case 6: joy_button_states[JOYINPUT_DPAD_DOWN] &= ~KEYSTATE_HELD; break;
 						case 7: joy_button_states[JOYINPUT_DPAD_LEFT] &= ~KEYSTATE_HELD; break;
-						case 11:
+						case 9:
 						case 15: joy_button_states[JOYINPUT_X] &= ~KEYSTATE_HELD; break;
 						case 12: joy_button_states[JOYINPUT_Y] &= ~KEYSTATE_HELD; break;
 						case 13: joy_button_states[JOYINPUT_B] &= ~KEYSTATE_HELD; break;
