@@ -1672,15 +1672,19 @@ int input_str(const rect_type* rect,char* buffer,int max_length,const char *init
 	SDL_SetTextInputRect(&sdlrect);
 	SDL_StartTextInput();
 
-	word key;
 	short current_xpos;
 	short length = 0;
+	#ifndef __PS2__
+	word key;
 	short cursor_visible = 0;
+	#endif
 	draw_rect(rect, bgcolor);
 	short init_length = strlen(initial);
 	if (has_initial) {
 		strcpy(buffer, initial);
 		length = init_length;
+	} else {
+		buffer[0] = 0;
 	}
 	current_xpos = rect->left + arg_4;
 	short ypos = get_text_center_y(rect);
@@ -1689,6 +1693,72 @@ int input_str(const rect_type* rect,char* buffer,int max_length,const char *init
 	draw_cstring(initial);
 	//restore_curr_pos?();
 	current_xpos += get_cstring_width(initial) + (init_length != 0) * arg_4;
+#ifdef __PS2__
+	// The PS2 has no keyboard. Use an arcade-style name entry: Up/Down
+	// changes the last character, Right adds one, Left/Circle erases, and
+	// Cross confirms.
+	static const char ps2_name_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789.-";
+	if (length == 0) {
+		buffer[0] = 'A';
+		buffer[1] = 0;
+		length = 1;
+	}
+	for (int i = 0; i < JOYINPUT_NUM; ++i) {
+		joy_button_states[i] &= ~KEYSTATE_HELD_NEW;
+	}
+	display_text_bottom("UP/DOWN: LETTER  RIGHT: NEXT  CROSS: OK  CIRCLE: ERASE");
+	do {
+		draw_rect(rect, bgcolor);
+		current_xpos = rect->left + arg_4;
+		set_curr_pos(current_xpos, ypos);
+		textstate.textcolor = color;
+		draw_cstring(buffer);
+		current_xpos += get_cstring_width(buffer) + arg_4;
+		draw_text_cursor(current_xpos, ypos, color);
+
+		do {
+			idle();
+			delay_ticks(1);
+		} while (!(joy_button_states[JOYINPUT_DPAD_UP] & KEYSTATE_HELD_NEW) &&
+				!(joy_button_states[JOYINPUT_DPAD_DOWN] & KEYSTATE_HELD_NEW) &&
+				!(joy_button_states[JOYINPUT_DPAD_LEFT] & KEYSTATE_HELD_NEW) &&
+				!(joy_button_states[JOYINPUT_DPAD_RIGHT] & KEYSTATE_HELD_NEW) &&
+				!(joy_button_states[JOYINPUT_A] & KEYSTATE_HELD_NEW) &&
+				!(joy_button_states[JOYINPUT_B] & KEYSTATE_HELD_NEW));
+
+		bool pressed_up = joy_button_states[JOYINPUT_DPAD_UP] & KEYSTATE_HELD_NEW;
+		bool pressed_down = joy_button_states[JOYINPUT_DPAD_DOWN] & KEYSTATE_HELD_NEW;
+		bool pressed_left = joy_button_states[JOYINPUT_DPAD_LEFT] & KEYSTATE_HELD_NEW;
+		bool pressed_right = joy_button_states[JOYINPUT_DPAD_RIGHT] & KEYSTATE_HELD_NEW;
+		bool pressed_cross = joy_button_states[JOYINPUT_A] & KEYSTATE_HELD_NEW;
+		bool pressed_circle = joy_button_states[JOYINPUT_B] & KEYSTATE_HELD_NEW;
+		for (int i = 0; i < JOYINPUT_NUM; ++i) {
+			joy_button_states[i] &= ~KEYSTATE_HELD_NEW;
+		}
+
+		if (pressed_cross) {
+			buffer[length] = 0;
+			erase_bottom_text(1);
+			SDL_StopTextInput();
+			return length;
+		}
+		if ((pressed_left || pressed_circle) && length > 1) {
+			buffer[--length] = 0;
+		} else if (pressed_right && length < max_length) {
+			int next_xpos = rect->left + arg_4 + get_cstring_width(buffer) + arg_4;
+			if (next_xpos + get_char_width('A') + get_char_width('_') < rect->right) {
+				buffer[length++] = 'A';
+				buffer[length] = 0;
+			}
+		} else if (pressed_up || pressed_down) {
+			const char* selected = strchr(ps2_name_chars, buffer[length - 1]);
+			int selected_index = selected != NULL ? (int)(selected - ps2_name_chars) : 0;
+			int char_count = (int)strlen(ps2_name_chars);
+			selected_index = (selected_index + (pressed_down ? 1 : char_count - 1)) % char_count;
+			buffer[length - 1] = ps2_name_chars[selected_index];
+		}
+	} while (1);
+#else
 	do {
 		key = 0;
 		do {
@@ -1745,6 +1815,7 @@ int input_str(const rect_type* rect,char* buffer,int max_length,const char *init
 			}
 		}
 	} while(1);
+#endif
 }
 
 #else // USE_TEXT

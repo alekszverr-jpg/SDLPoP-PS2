@@ -59,6 +59,8 @@ workload statistics for diagnosing real-time audio performance.
 - Circle: go back or cancel in menus
 - Start or Select: pause menu
 - D-pad Left/Right: change the selected setting
+- Hall of Fame name entry: Up/Down changes the current character, Right adds
+  another character, Left or Circle erases, and Cross confirms
 
 The launch information screen and **Settings > Controls** use these PS2 button
 names instead of the original PC keyboard shortcuts.
