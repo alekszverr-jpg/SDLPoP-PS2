@@ -597,7 +597,7 @@ void play_sound_from_buffer(sound_buffer_type* buffer);
 void turn_music_on_off(byte new_state);
 void turn_sound_on_off(byte new_state);
 int check_sound_playing(void);
-int is_digi_sound_playing(int sound_id);
+int is_effect_sound_playing(int sound_id);
 void apply_aspect_ratio(void);
 void window_resized(void);
 #ifdef __PS2__

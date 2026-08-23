@@ -1362,7 +1362,7 @@ void play_menu_sound(int sound_id) {
 	#ifdef __PS2__
 	// Navigation key repeat can arrive faster than the short sample can finish.
 	// Restarting the same buffer on every repeat makes it sound chopped and slow.
-	if (is_digi_sound_playing(sound_id)) return;
+	if (is_effect_sound_playing(sound_id)) return;
 	#endif
 	play_sound(sound_id);
 	play_next_sound();

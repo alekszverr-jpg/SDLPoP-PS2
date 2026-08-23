@@ -2004,10 +2004,11 @@ int digi_remaining_length = 0;
 SDL_AudioSpec* digi_audiospec = NULL;
 // The desired samplerate. Everything will be resampled to this.
 #ifdef __PS2__
-// Keep software OPL synthesis within the EE's real-time audio budget. audsrv
-// has a dedicated 12 kHz stereo path which duplicates each frame exactly four
-// times for the SPU2's native 48 kHz output, so tempo and pitch stay unchanged.
-const int digi_samplerate = 12000;
+// DBOPL leaves enough EE headroom to use the 24 kHz audsrv path. Compared with
+// 12 kHz this halves the duration of SDL's fixed 512-frame PS2 audio block,
+// which keeps rapid menu feedback responsive while retaining a safe budget for
+// the densest title-music callback measured on real hardware.
+const int digi_samplerate = 24000;
 #else
 const int digi_samplerate = 44100;
 #endif
@@ -2204,6 +2205,9 @@ static Uint64 ps2_audio_callback_work_us;
 static Uint64 ps2_audio_callback_budget_us;
 static Uint64 ps2_audio_callback_max_us;
 static Uint64 ps2_audio_callback_overruns;
+static Uint64 ps2_audio_callback_last_started;
+static Uint64 ps2_audio_callback_max_gap_us;
+static Uint64 ps2_audio_callback_late_count;
 static Uint64 ps2_audio_midi_work_us;
 static Uint64 ps2_audio_midi_max_us;
 static unsigned int ps2_audio_peak_midi_events;
@@ -2224,6 +2228,8 @@ static void ps2_audio_log_stats(void) {
 	Uint64 budget_us = ps2_audio_callback_budget_us;
 	Uint64 max_us = ps2_audio_callback_max_us;
 	Uint64 overruns = ps2_audio_callback_overruns;
+	Uint64 max_gap_us = ps2_audio_callback_max_gap_us;
+	Uint64 late_count = ps2_audio_callback_late_count;
 	Uint64 midi_work_us = ps2_audio_midi_work_us;
 	Uint64 midi_max_us = ps2_audio_midi_max_us;
 	unsigned int peak_events = ps2_audio_peak_midi_events;
@@ -2236,6 +2242,8 @@ static void ps2_audio_log_stats(void) {
 	ps2_boot_log("audio: callbacks=%llu load=%u%% max=%lluus overruns=%llu",
 		(unsigned long long)callback_count, load_percent,
 		(unsigned long long)max_us, (unsigned long long)overruns);
+	ps2_boot_log("audio-timing: max_gap=%lluus late=%llu",
+		(unsigned long long)max_gap_us, (unsigned long long)late_count);
 	ps2_boot_log("audio-midi: load=%u%% max=%lluus peak_events=%u fragments=%u frames=%u voices=%u",
 		midi_load_percent, (unsigned long long)midi_max_us, peak_events,
 		peak_fragments, peak_frames, peak_voices);
@@ -2245,6 +2253,20 @@ static void ps2_audio_log_stats(void) {
 void audio_callback(void* userdata, Uint8* stream_orig, int len_orig) {
 	#ifdef __PS2__
 	Uint64 callback_started = SDL_GetPerformanceCounter();
+	Uint64 performance_frequency = SDL_GetPerformanceFrequency();
+	int timing_bytes_per_frame = sizeof(short) * digi_audiospec->channels;
+	Uint64 timing_frames = timing_bytes_per_frame > 0 ?
+		(Uint64)len_orig / (Uint64)timing_bytes_per_frame : 0;
+	Uint64 expected_gap_us = timing_frames * 1000000ULL / (Uint64)digi_audiospec->freq;
+	if (ps2_audio_callback_last_started != 0) {
+		Uint64 gap_us = (callback_started - ps2_audio_callback_last_started) *
+			1000000ULL / performance_frequency;
+		ps2_audio_callback_max_gap_us = MAX(ps2_audio_callback_max_gap_us, gap_us);
+		if (gap_us > expected_gap_us + expected_gap_us / 2) {
+			++ps2_audio_callback_late_count;
+		}
+	}
+	ps2_audio_callback_last_started = callback_started;
 	Uint64 midi_ticks = 0;
 	unsigned int midi_events = 0;
 	unsigned int midi_fragments = 0;
@@ -2328,7 +2350,6 @@ void audio_callback(void* userdata, Uint8* stream_orig, int len_orig) {
 #endif
 
 	#ifdef __PS2__
-	Uint64 performance_frequency = SDL_GetPerformanceFrequency();
 	Uint64 callback_us = (SDL_GetPerformanceCounter() - callback_started) * 1000000ULL / performance_frequency;
 	Uint64 midi_us = midi_ticks * 1000000ULL / performance_frequency;
 	int bytes_per_frame = sizeof(short) * digi_audiospec->channels;
@@ -2701,8 +2722,8 @@ int check_sound_playing() {
 	return speaker_playing || digi_playing || midi_playing || ogg_playing;
 }
 
-int is_digi_sound_playing(int sound_id) {
-	return digi_playing && current_sound == sound_id;
+int is_effect_sound_playing(int sound_id) {
+	return (digi_playing || speaker_playing) && current_sound == sound_id;
 }
 
 void apply_aspect_ratio() {
