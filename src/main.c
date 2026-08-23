@@ -106,6 +106,7 @@ int main(int argc, char *argv[])
 	}
 	FILE* log_file = fopen("SDLPoP-PS2.log", "w");
 	if (log_file != NULL) fclose(log_file);
+	ps2_boot_log("build: %s", SDLPOP_BUILD_ID);
 	ps2_boot_log("main: cwd=%s argv0=%s", cwd, argc > 0 && argv[0] != NULL ? argv[0] : "(none)");
 	ps2_boot_log("main: data/PRINCE ready after %d ms", data_wait_attempts * 100);
 	scr_printf("\nGame data found after %d ms.\nStarting SDL...\n", data_wait_attempts * 100);

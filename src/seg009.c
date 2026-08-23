@@ -2701,6 +2701,10 @@ int check_sound_playing() {
 	return speaker_playing || digi_playing || midi_playing || ogg_playing;
 }
 
+int is_digi_sound_playing(int sound_id) {
+	return digi_playing && current_sound == sound_id;
+}
+
 void apply_aspect_ratio() {
 	// Allow us to use a consistent set of screen co-ordinates, even if the screen size changes
 	#ifdef __PS2__

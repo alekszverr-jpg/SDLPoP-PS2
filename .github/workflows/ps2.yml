@@ -86,7 +86,8 @@ jobs:
           cmake -S src -B build-ps2 \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="$PS2DEV/share/ps2dev.cmake" \
-            -DCMAKE_PREFIX_PATH="$PS2SDK/ports"
+            -DCMAKE_PREFIX_PATH="$PS2SDK/ports" \
+            -DSDLPOP_BUILD_ID="${GITHUB_SHA::7}"
           cmake --build build-ps2 --parallel 2
           test -s BOOT.ELF
 

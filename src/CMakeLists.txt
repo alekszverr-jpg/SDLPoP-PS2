@@ -133,6 +133,10 @@ if(PS2)
     # Software OPL synthesis runs in SDL's real-time audio thread. Optimize it
     # aggressively so the EE can keep the audsrv ring buffer filled.
     target_compile_options(prince PRIVATE -O3 -G0)
+    if(NOT DEFINED SDLPOP_BUILD_ID)
+        set(SDLPOP_BUILD_ID "unknown")
+    endif()
+    target_compile_definitions(prince PRIVATE SDLPOP_BUILD_ID="${SDLPOP_BUILD_ID}")
     target_link_libraries(prince PRIVATE
         SDL2_image::SDL2_image-static
         SDL2::SDL2main

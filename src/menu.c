@@ -1359,6 +1359,11 @@ bool at_scroll_up_boundary; // When navigating up using keyboard/controller, whe
 bool at_scroll_down_boundary; // When navigating down using keyboard/controller, whether we also need to scroll down
 
 void play_menu_sound(int sound_id) {
+	#ifdef __PS2__
+	// Navigation key repeat can arrive faster than the short sample can finish.
+	// Restarting the same buffer on every repeat makes it sound chopped and slow.
+	if (is_digi_sound_playing(sound_id)) return;
+	#endif
 	play_sound(sound_id);
 	play_next_sound();
 }
