@@ -118,16 +118,6 @@ else()
             ${CMAKE_SOURCE_DIR}/../SDLPoP.ini ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/prince.app/Contents/MacOS/SDLPoP.ini)
 endif()
 
-# Nuked-OPL3-fast is API-compatible with the previously vendored 1.7.4 core.
-# Preserve its pre-2022 routing and envelope behaviour so existing music keeps
-# the same sound. Build the 16 KiB waveform lookup table once at runtime rather
-# than adding the generated 75 KiB header to every target.
-target_compile_definitions(prince PRIVATE
-    OPL_WF_TABLE_RUNTIME=1
-    OPL_COMPAT_OLD_EG=1
-    OPL_COMPAT_DEFERRED_4OP_ALG=1
-)
-
 if(PS2)
     # SDL2main supplies the PS2 startup wrapper which resets the IOP and
     # mounts the device from which BOOT.ELF was launched.
