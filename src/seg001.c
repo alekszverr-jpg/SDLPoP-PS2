@@ -778,12 +778,14 @@ void hof_write() {
 	char custom_hof_path[POP_MAX_PATH];
 	const char* hof_path = get_hof_path(custom_hof_path, sizeof(custom_hof_path));
 	FILE* handle = fopen(hof_path, "wb");
-	if (handle == NULL ||
-		fwrite(&hof_count, 1, 2, handle) != 2 ||
-		fwrite(&hof, 1, sizeof(hof), handle) != sizeof(hof))
+	int success = handle != NULL &&
+		fwrite(&hof_count, 1, sizeof(hof_count), handle) == sizeof(hof_count) &&
+		fwrite(&hof, 1, sizeof(hof), handle) == sizeof(hof);
+	if (!success)
 		perror(hof_path);
-	if (handle != NULL)
-		fclose(handle);
+	if (handle != NULL && fclose(handle) != 0)
+		success = 0;
+	ps2_boot_log("hof: write %s path=%s count=%d", success ? "ok" : "failed", hof_path, hof_count);
 }
 
 // seg001:0F6C
@@ -792,14 +794,20 @@ void hof_read() {
 	char custom_hof_path[POP_MAX_PATH];
 	const char* hof_path = get_hof_path(custom_hof_path, sizeof(custom_hof_path));
 	FILE* handle = fopen(hof_path, "rb");
-	if (handle == NULL)
+	if (handle == NULL) {
+		ps2_boot_log("hof: no file path=%s", hof_path);
 		return;
-	if (fread(&hof_count, 1, 2, handle) != 2 ||
-		fread(&hof, 1, sizeof(hof), handle) != sizeof(hof)) {
+	}
+	int success =
+		fread(&hof_count, 1, sizeof(hof_count), handle) == sizeof(hof_count) &&
+		fread(&hof, 1, sizeof(hof), handle) == sizeof(hof) &&
+		hof_count >= 0 && hof_count <= MAX_HOF_COUNT;
+	if (!success) {
 		perror(hof_path);
 		hof_count = 0;
 	}
 	fclose(handle);
+	ps2_boot_log("hof: read %s path=%s count=%d", success ? "ok" : "failed", hof_path, hof_count);
 }
 
 // seg001:0FC3

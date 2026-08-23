@@ -4037,9 +4037,6 @@ void process_events() {
 						case 14: joy_button_states[JOYINPUT_A] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; // Cross: down
 						default: break;
 					}
-					if (event.jbutton.button >= 8 && event.jbutton.button <= 11) {
-						ps2_boot_log("input: shoulder down raw_button=%u", (unsigned)event.jbutton.button);
-					}
 #else
 					if      (event.jbutton.button == SDL_JOYSTICK_BUTTON_Y)   joy_button_states[JOYINPUT_Y] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; // Y (up)
 					else if (event.jbutton.button == SDL_JOYSTICK_BUTTON_X)   joy_button_states[JOYINPUT_X] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW;    // X (Shift)
