@@ -2038,10 +2038,9 @@ void stop_digi(void) {
 stb_vorbis* ogg_decoder;
 
 void stop_ogg(void) {
-	SDL_PauseAudio(1);
 	if (!ogg_playing) return;
-	ogg_playing = 0;
 	SDL_LockAudio();
+	ogg_playing = 0;
 	ogg_decoder = NULL;
 	SDL_UnlockAudio();
 }
