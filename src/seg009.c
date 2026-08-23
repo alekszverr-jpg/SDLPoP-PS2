@@ -3941,6 +3941,9 @@ void process_events() {
 					case SDL_CONTROLLER_BUTTON_Y:          joy_button_states[JOYINPUT_Y] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; /*** Y (up) ***/
 					case SDL_CONTROLLER_BUTTON_X:          joy_button_states[JOYINPUT_X] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; /*** X (Shift) ***/
 					case SDL_CONTROLLER_BUTTON_B:          joy_button_states[JOYINPUT_B] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; /*** B (unused) ***/
+#ifdef __PS2__
+					case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: joy_button_states[JOYINPUT_X] |= KEYSTATE_HELD | KEYSTATE_HELD_NEW; break; // R1: action
+#endif
 
 					case SDL_CONTROLLER_BUTTON_START:
 					case SDL_CONTROLLER_BUTTON_BACK:
@@ -3970,6 +3973,9 @@ void process_events() {
 					case SDL_CONTROLLER_BUTTON_Y:          joy_button_states[JOYINPUT_Y] &= ~KEYSTATE_HELD; break; /*** Y (up) ***/
 					case SDL_CONTROLLER_BUTTON_X:          joy_button_states[JOYINPUT_X] &= ~KEYSTATE_HELD; break; /*** X (Shift) ***/
 					case SDL_CONTROLLER_BUTTON_B:          joy_button_states[JOYINPUT_B] &= ~KEYSTATE_HELD; break; /*** B (unused) ***/
+#ifdef __PS2__
+					case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: joy_button_states[JOYINPUT_X] &= ~KEYSTATE_HELD; break;
+#endif
 
 					case SDL_CONTROLLER_BUTTON_START:      joy_button_states[JOYINPUT_START] &= ~KEYSTATE_HELD; break;
 					case SDL_CONTROLLER_BUTTON_BACK:       joy_button_states[JOYINPUT_BACK] &= ~KEYSTATE_HELD; break;
