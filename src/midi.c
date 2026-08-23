@@ -22,12 +22,17 @@ DESCRIPTION:
 
 CREDITS:
     The OPL integration code is based in part on Chocolate Doom's MIDI interface, by Simon Howard (GPLv2-licensed).
-    Uses the Nuked OPL3 emulator by Alexey Khokholov (GPLv2-licensed).
+    Uses the Nuked OPL3 emulator by Alexey Khokholov (GPLv2-licensed), or the
+    DOSBox/Chocolate Doom DBOPL core on PS2 (GPLv2-licensed).
     MIDI playback code also published as standalone playback program 'popmidi' by Falcury (GPLv3)
 */
 
 #include "common.h"
+#ifdef __PS2__
+#include "dbopl.h"
+#else
 #include "opl3.h"
+#endif
 #include "math.h"
 
 #define MAX_MIDI_CHANNELS 16
@@ -44,7 +49,11 @@ extern short midi_playing; // seg009.c
 extern SDL_AudioSpec* digi_audiospec; // seg009.c
 extern int digi_unavailable; // seg009.c
 
+#ifdef __PS2__
+static Chip opl_chip;
+#else
 static opl3_chip opl_chip;
+#endif
 static void* instruments_data;
 static instrument_type* instruments;
 static int num_instruments;
@@ -341,12 +350,29 @@ void print_midi_event(int track_index, int event_index, midi_event_type* event) 
 static byte opl_cached_regs[512];
 
 static void opl_reset(int freq) {
+	#ifdef __PS2__
+	static bool tables_initialized = false;
+	if (!tables_initialized) {
+		DBOPL_InitTables();
+		tables_initialized = true;
+	}
+	memset(&opl_chip, 0, sizeof(opl_chip));
+	Chip__Chip(&opl_chip);
+	Chip__Setup(&opl_chip, (Bit32u)freq);
+	#else
 	OPL3_Reset(&opl_chip, freq);
+	#endif
 	memset(opl_cached_regs, 0, sizeof(opl_cached_regs));
 }
 
 static void opl_write_reg(word reg, byte value) {
+	#ifdef __PS2__
+	// Prince of Persia uses only the nine OPL2 voices. Keep DBOPL in its mono
+	// OPL2 mode even though the desktop Nuked backend enables OPL3 for stereo.
+	if (reg != 0x105) Chip__WriteReg(&opl_chip, reg, value);
+	#else
 	OPL3_WriteReg(&opl_chip, reg, value);
+	#endif
 	opl_cached_regs[reg] = value;
 }
 
@@ -531,7 +557,11 @@ void midi_callback(void *userdata, Uint8 *stream, int len) {
 	#endif
 	// Reuse one callback-local buffer. Allocating and freeing every MIDI
 	// fragment can starve short real-time audio buffers on slower targets.
+	#ifdef __PS2__
+	Bit32s* temp_buffer = alloca(len);
+	#else
 	short* temp_buffer = alloca(len);
+	#endif
 	int frames_needed = len / 4;
 	while (frames_needed > 0) {
 		if (ticks_to_next_pause > 0) {
@@ -546,12 +576,26 @@ void midi_callback(void *userdata, Uint8 *stream, int len) {
 			++ps2_midi_last_fragment_count;
 			ps2_midi_last_generated_frames += (unsigned int)advance_frames;
 			#endif
+			#ifdef __PS2__
+			Chip__GenerateBlock2(&opl_chip, (Bitu)advance_frames, temp_buffer);
+			#else
 			OPL3_GenerateStream(&opl_chip, temp_buffer, advance_frames);
+			#endif
 			if (is_sound_on && enable_music) {
+				#ifdef __PS2__
+				for (int frame = 0; frame < advance_frames; ++frame) {
+					int music_sample = temp_buffer[frame];
+					int mixed_left = ((short*)stream)[frame * 2] + music_sample;
+					int mixed_right = ((short*)stream)[frame * 2 + 1] + music_sample;
+					((short*)stream)[frame * 2] = (short)MAX(-32768, MIN(mixed_left, 32767));
+					((short*)stream)[frame * 2 + 1] = (short)MAX(-32768, MIN(mixed_right, 32767));
+				}
+				#else
 				for (int sample = 0; sample < advance_frames * 2; ++sample) {
 					int mixed_sample = ((short*)stream)[sample] + temp_buffer[sample];
 					((short*)stream)[sample] = (short)MAX(-32768, MIN(mixed_sample, 32767));
 				}
+				#endif
 			}
 
 			frames_needed -= advance_frames;

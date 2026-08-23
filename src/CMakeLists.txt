@@ -73,13 +73,19 @@ set(SOURCE_FILES
         seg009.c
         seqtbl.c
         options.c
-        midi.c opl3.c opl3.h
+        midi.c
         replay.c
         lighting.c
         screenshot.c
         menu.c
         stb_vorbis.c
         )
+
+if(PS2)
+    list(APPEND SOURCE_FILES dbopl.c dbopl.h)
+else()
+    list(APPEND SOURCE_FILES opl3.c opl3.h)
+endif()
 
 if(WIN32)
     list(APPEND SOURCE_FILES icon.rc)
