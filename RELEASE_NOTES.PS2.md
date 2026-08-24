@@ -14,6 +14,9 @@ the console and does not use DOS emulation.
 - DualShock 2 controls and PS2-specific control text.
 - Working game saves, quicksave/quickload, Hall of Fame persistence and exit
   to either the PS2 Browser or uLaunchELF.
+- Hall of Fame viewer available directly from the pause menu.
+- Safe title attract loop that returns to the title after Hall of Fame instead
+  of entering the unstable level 0 demonstration.
 - Lightweight DBOPL music playback tuned for the PS2. Menu navigation sounds
   are disabled to keep rapid scrolling from disturbing audio playback.
 - PS2-focused settings that hide desktop-only or unsuitable options.
@@ -49,5 +52,4 @@ The release ZIP also includes `PRINCE.ELF.sha256` for integrity verification.
 - 480p requires a compatible television or monitor and cable.
 - External resource packs and mods are not loaded by the PS2 build; the stock
   game resources are compiled into the ELF.
-- Hall of Fame persistence still needs a final smoke test on real hardware.
 - Accepted 480p output still needs testing on a compatible display.

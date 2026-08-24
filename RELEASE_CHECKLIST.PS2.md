@@ -21,15 +21,16 @@
 - [x] Title music and dense passages play without crackling or slowdown.
 - [x] Gameplay no longer freezes around falling-gate sound playback.
 - [x] Rapid settings-menu scrolling no longer freezes or queues repeated sounds.
+- [x] Hall of Fame controller text entry, persistence and pause-menu viewer.
+- [x] The title attract loop returns to the title instead of starting the
+  unstable level 0 demo.
 
 ## Confirmed in PCSX2
 
-- [x] Hall of Fame controller text entry and persistence.
 - [x] 480p confirmation dialog rolls back to 240p when not accepted.
 
 ## Final smoke tests
 
 - [x] With USB connected, confirm files are created in `mass:/SDLPoP-PS2`.
 - [x] Without USB, confirm files are created in `mc0:/SDLPoP-PS2`.
-- [ ] Confirm Hall of Fame persistence on real hardware.
 - [ ] If a compatible display is available, confirm accepted 480p persists.

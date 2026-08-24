@@ -71,6 +71,8 @@ workload statistics for diagnosing real-time audio performance.
 - D-pad Left/Right: change the selected setting
 - Hall of Fame name entry: Up/Down changes the current character, Right adds
   another character, Left or Circle erases, and Cross confirms
+- Hall of Fame can also be viewed at any time from the pause menu; Cross or
+  Circle returns to the menu
 
 The launch information screen and **Settings > Controls** use these PS2 button
 names instead of the original PC keyboard shortcuts.
@@ -102,8 +104,10 @@ DualShock 2 input, 240p output, screen calibration and menu settings have been
 tested on a real PS2. Save paths, quicksave/quickload and exiting to PS2 Browser
 or uLaunchELF have also been verified on hardware. USB storage selection and
 memory-card fallback both work on hardware. Audio timing with the lower-load
-DBOPL mixer has been verified on hardware; Hall of Fame entry and persistence
-have been verified in PCSX2. Hall of Fame persistence on a real console and
-480p confirmation on a compatible display remain explicit hardware smoke-test
-items. The complete release-candidate matrix is tracked in
+DBOPL mixer has been verified on hardware. Hall of Fame entry, persistence and
+the pause-menu viewer have also been verified on a real console. When left
+unattended after the Hall of Fame screen, the PS2 port restarts the title loop
+instead of entering the original unstable level 0 demonstration. Accepted
+480p output on a compatible display remains the only explicit hardware
+smoke-test item. The complete release-candidate matrix is tracked in
 `RELEASE_CHECKLIST.PS2.md`.
