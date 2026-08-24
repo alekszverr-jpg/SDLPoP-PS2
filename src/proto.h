@@ -600,7 +600,6 @@ int check_sound_playing(void);
 void apply_aspect_ratio(void);
 void window_resized(void);
 #ifdef __PS2__
-void ps2_play_menu_click(int sound_id);
 void ps2_set_video_mode(byte mode);
 void ps2_apply_screen_adjustment(void);
 void ps2_load_screen_settings(void);

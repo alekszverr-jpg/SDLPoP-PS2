@@ -2046,8 +2046,7 @@ SDL_AudioSpec* digi_audiospec = NULL;
 int digi_unavailable = 0;
 // The desired samplerate. Everything will be resampled to this.
 #ifdef __PS2__
-// Keep the music path at the proven low-load rate. PS2 menu feedback is mixed
-// separately and no longer depends on restarting effects at callback borders.
+// Keep software OPL synthesis within the EE's proven real-time audio budget.
 const int digi_samplerate = 12000;
 #else
 const int digi_samplerate = 44100;
@@ -2259,76 +2258,6 @@ extern unsigned int ps2_midi_last_fragment_count;
 extern unsigned int ps2_midi_last_generated_frames;
 extern unsigned int ps2_midi_last_active_voices;
 
-// Console UI feedback is deliberately separate from the original single
-// channel used by in-game effects. It is generated in the audio callback, so
-// holding the D-pad cannot repeatedly stop and restart a long gameplay sample.
-static unsigned int ps2_menu_click_phase;
-static unsigned int ps2_menu_click_frequency;
-static int ps2_menu_click_frames_left;
-static int ps2_menu_click_total_frames;
-static SDL_atomic_t ps2_menu_click_request;
-static Uint32 ps2_menu_click_requested_at;
-static Uint64 ps2_menu_click_count;
-static Uint32 ps2_menu_click_max_latency_ms;
-
-void ps2_play_menu_click(int sound_id) {
-	init_digi();
-	if (digi_unavailable || digi_audiospec == NULL || !is_sound_on) return;
-
-	// Do not call any SDL audio-device API from repeated menu input. Even status
-	// queries can contend with the PS2 backend while its callback owns audsrv.
-	// The device is started by normal game audio; this path only publishes the
-	// newest click request for the callback to consume atomically.
-	ps2_menu_click_requested_at = SDL_GetTicks();
-	SDL_AtomicSet(&ps2_menu_click_request, sound_id + 1);
-}
-
-static void ps2_mix_menu_click(Uint8* stream, int len) {
-	int request = SDL_AtomicSet(&ps2_menu_click_request, 0);
-	if (request != 0) {
-		int sound_id = request - 1;
-		unsigned int frequency = 900;
-		int duration_ms = 22;
-		if (sound_id == sound_22_loose_shake_3) {
-			frequency = 1250;
-			duration_ms = 30;
-		} else if (sound_id == sound_10_sword_vs_sword) {
-			frequency = 650;
-			duration_ms = 38;
-		}
-
-		ps2_menu_click_phase = 0;
-		ps2_menu_click_frequency = frequency;
-		ps2_menu_click_total_frames = MAX(1, digi_audiospec->freq * duration_ms / 1000);
-		ps2_menu_click_frames_left = ps2_menu_click_total_frames;
-		Uint32 latency_ms = SDL_GetTicks() - ps2_menu_click_requested_at;
-		ps2_menu_click_max_latency_ms = MAX(ps2_menu_click_max_latency_ms, latency_ms);
-		++ps2_menu_click_count;
-	}
-
-	if (ps2_menu_click_frames_left <= 0 || ps2_menu_click_frequency == 0) return;
-
-	short* samples = (short*)stream;
-	int channels = digi_audiospec->channels;
-	int frames = len / ((int)sizeof(short) * channels);
-	int sample_rate = digi_audiospec->freq;
-	for (int frame = 0; frame < frames && ps2_menu_click_frames_left > 0; ++frame) {
-		// A quiet decaying square pulse stays distinct on CRT speakers without
-		// masking the OPL music underneath it.
-		int amplitude = 2800 * ps2_menu_click_frames_left / ps2_menu_click_total_frames;
-		int click_sample = ps2_menu_click_phase < (unsigned int)sample_rate / 2 ? amplitude : -amplitude;
-		for (int channel = 0; channel < channels; ++channel) {
-			int mixed = samples[frame * channels + channel] + click_sample;
-			samples[frame * channels + channel] = (short)MAX(-32768, MIN(mixed, 32767));
-		}
-		ps2_menu_click_phase += ps2_menu_click_frequency;
-		while (ps2_menu_click_phase >= (unsigned int)sample_rate) {
-			ps2_menu_click_phase -= (unsigned int)sample_rate;
-		}
-		--ps2_menu_click_frames_left;
-	}
-}
-
 static void ps2_audio_log_stats(void) {
 	if (digi_audiospec == NULL || ps2_audio_callback_count == 0) return;
 	SDL_LockAudio();
@@ -2339,8 +2268,6 @@ static void ps2_audio_log_stats(void) {
 	Uint64 overruns = ps2_audio_callback_overruns;
 	Uint64 max_gap_us = ps2_audio_callback_max_gap_us;
 	Uint64 late_count = ps2_audio_callback_late_count;
-	Uint64 menu_click_count = ps2_menu_click_count;
-	Uint32 menu_click_max_latency_ms = ps2_menu_click_max_latency_ms;
 	Uint64 midi_work_us = ps2_audio_midi_work_us;
 	Uint64 midi_max_us = ps2_audio_midi_max_us;
 	unsigned int peak_events = ps2_audio_peak_midi_events;
@@ -2355,8 +2282,6 @@ static void ps2_audio_log_stats(void) {
 		(unsigned long long)max_us, (unsigned long long)overruns);
 	ps2_boot_log("audio-timing: max_gap=%lluus late=%llu",
 		(unsigned long long)max_gap_us, (unsigned long long)late_count);
-	ps2_boot_log("audio-ui: clicks=%llu max_latency=%ums",
-		(unsigned long long)menu_click_count, menu_click_max_latency_ms);
 	ps2_boot_log("audio-midi: load=%u%% max=%lluus peak_events=%u fragments=%u frames=%u voices=%u",
 		midi_load_percent, (unsigned long long)midi_max_us, peak_events,
 		peak_fragments, peak_frames, peak_voices);
@@ -2423,10 +2348,6 @@ void audio_callback(void* userdata, Uint8* stream_orig, int len_orig) {
 	} else if (ogg_playing) {
 		ogg_callback(userdata, stream, len);
 	}
-	#ifdef __PS2__
-	ps2_mix_menu_click(stream, len);
-	#endif
-
 #ifdef USE_FAST_FORWARD
 	if (audio_speed > 1) {
 
@@ -2544,9 +2465,6 @@ void init_digi() {
 		desired->freq, desired->channels, desired->samples,
 		obtained->freq, obtained->channels, obtained->samples, obtained->format);
 	free(desired);
-	// Start the device once. Menu navigation only posts atomic click requests
-	// and must never touch the PS2 audio backend during D-pad auto-repeat.
-	SDL_PauseAudio(0);
 	#else
 	digi_audiospec = desired;
 	#endif
