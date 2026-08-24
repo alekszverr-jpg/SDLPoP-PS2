@@ -42,7 +42,7 @@ The game writes normal saves, Hall of Fame data, quicksaves, menu settings and
 screen calibration next to the ELF. Use writable media if those features are
 needed.
 
-The PS2 build mixes audio at 24 kHz and lets audsrv perform its exact 2x
+The PS2 build mixes audio at 12 kHz and lets audsrv perform its exact 4x
 conversion to the SPU2's native 48 kHz output. Music uses the compact DBOPL core
 from DOSBox/Chocolate Doom in OPL2 mode, rendering the nine voices directly at
 the output rate instead of running the cycle-accurate 49.7 kHz Nuked core. The

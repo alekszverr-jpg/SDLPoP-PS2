@@ -2005,11 +2005,9 @@ SDL_AudioSpec* digi_audiospec = NULL;
 int digi_unavailable = 0;
 // The desired samplerate. Everything will be resampled to this.
 #ifdef __PS2__
-// DBOPL leaves enough EE headroom to use the 24 kHz audsrv path. Compared with
-// 12 kHz this halves the duration of SDL's fixed 512-frame PS2 audio block,
-// which keeps rapid menu feedback responsive while retaining a safe budget for
-// the densest title-music callback measured on real hardware.
-const int digi_samplerate = 24000;
+// Keep the music path at the proven low-load rate. PS2 menu feedback is mixed
+// separately and no longer depends on restarting effects at callback borders.
+const int digi_samplerate = 12000;
 #else
 const int digi_samplerate = 44100;
 #endif
@@ -2227,31 +2225,45 @@ static unsigned int ps2_menu_click_phase;
 static unsigned int ps2_menu_click_frequency;
 static int ps2_menu_click_frames_left;
 static int ps2_menu_click_total_frames;
+static SDL_atomic_t ps2_menu_click_request;
+static Uint32 ps2_menu_click_requested_at;
+static Uint64 ps2_menu_click_count;
+static Uint32 ps2_menu_click_max_latency_ms;
 
 void ps2_play_menu_click(int sound_id) {
 	init_digi();
 	if (digi_unavailable || digi_audiospec == NULL || !is_sound_on) return;
 
-	unsigned int frequency = 900;
-	int duration_ms = 22;
-	if (sound_id == sound_22_loose_shake_3) {
-		frequency = 1250;
-		duration_ms = 30;
-	} else if (sound_id == sound_10_sword_vs_sword) {
-		frequency = 650;
-		duration_ms = 38;
-	}
-
-	SDL_LockAudio();
-	ps2_menu_click_phase = 0;
-	ps2_menu_click_frequency = frequency;
-	ps2_menu_click_total_frames = MAX(1, digi_audiospec->freq * duration_ms / 1000);
-	ps2_menu_click_frames_left = ps2_menu_click_total_frames;
-	SDL_UnlockAudio();
-	SDL_PauseAudio(0);
+	// Do not lock or repeatedly resume SDL for each D-pad repeat. The callback
+	// atomically consumes the latest request without disturbing audsrv timing.
+	ps2_menu_click_requested_at = SDL_GetTicks();
+	SDL_AtomicSet(&ps2_menu_click_request, sound_id + 1);
+	if (SDL_GetAudioStatus() != SDL_AUDIO_PLAYING) SDL_PauseAudio(0);
 }
 
 static void ps2_mix_menu_click(Uint8* stream, int len) {
+	int request = SDL_AtomicSet(&ps2_menu_click_request, 0);
+	if (request != 0) {
+		int sound_id = request - 1;
+		unsigned int frequency = 900;
+		int duration_ms = 22;
+		if (sound_id == sound_22_loose_shake_3) {
+			frequency = 1250;
+			duration_ms = 30;
+		} else if (sound_id == sound_10_sword_vs_sword) {
+			frequency = 650;
+			duration_ms = 38;
+		}
+
+		ps2_menu_click_phase = 0;
+		ps2_menu_click_frequency = frequency;
+		ps2_menu_click_total_frames = MAX(1, digi_audiospec->freq * duration_ms / 1000);
+		ps2_menu_click_frames_left = ps2_menu_click_total_frames;
+		Uint32 latency_ms = SDL_GetTicks() - ps2_menu_click_requested_at;
+		ps2_menu_click_max_latency_ms = MAX(ps2_menu_click_max_latency_ms, latency_ms);
+		++ps2_menu_click_count;
+	}
+
 	if (ps2_menu_click_frames_left <= 0 || ps2_menu_click_frequency == 0) return;
 
 	short* samples = (short*)stream;
@@ -2285,6 +2297,8 @@ static void ps2_audio_log_stats(void) {
 	Uint64 overruns = ps2_audio_callback_overruns;
 	Uint64 max_gap_us = ps2_audio_callback_max_gap_us;
 	Uint64 late_count = ps2_audio_callback_late_count;
+	Uint64 menu_click_count = ps2_menu_click_count;
+	Uint32 menu_click_max_latency_ms = ps2_menu_click_max_latency_ms;
 	Uint64 midi_work_us = ps2_audio_midi_work_us;
 	Uint64 midi_max_us = ps2_audio_midi_max_us;
 	unsigned int peak_events = ps2_audio_peak_midi_events;
@@ -2299,6 +2313,8 @@ static void ps2_audio_log_stats(void) {
 		(unsigned long long)max_us, (unsigned long long)overruns);
 	ps2_boot_log("audio-timing: max_gap=%lluus late=%llu",
 		(unsigned long long)max_gap_us, (unsigned long long)late_count);
+	ps2_boot_log("audio-ui: clicks=%llu max_latency=%ums",
+		(unsigned long long)menu_click_count, menu_click_max_latency_ms);
 	ps2_boot_log("audio-midi: load=%u%% max=%lluus peak_events=%u fragments=%u frames=%u voices=%u",
 		midi_load_percent, (unsigned long long)midi_max_us, peak_events,
 		peak_fragments, peak_frames, peak_voices);
