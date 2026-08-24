@@ -3615,44 +3615,42 @@ image_type* method_3_blit_mono(image_type* image,int xpos,int ypos,int blitter,b
 	int w = image->w;
 	int h = image->h;
 
-	#ifdef __PS2__
-	// The generic renderer converts and frees a temporary 32-bit surface for
-	// every glyph. A settings-menu redraw contains hundreds of glyphs, so rapid
-	// scrolling eventually fragments the PS2 heap and can stall SDL. The source
-	// images already have their color key configured when they are loaded; SDL's
-	// color modulation can tint and blit them without allocating a surface.
-	rgb_type ps2_palette_color = palette[color];
-	Uint8 old_r = 255, old_g = 255, old_b = 255;
-	SDL_BlendMode old_blend_mode = SDL_BLENDMODE_NONE;
-	SDL_GetSurfaceColorMod(image, &old_r, &old_g, &old_b);
-	SDL_GetSurfaceBlendMode(image, &old_blend_mode);
-
-	if (SDL_SetSurfaceColorMod(image,
-			ps2_palette_color.r << 2,
-			ps2_palette_color.g << 2,
-			ps2_palette_color.b << 2) != 0 ||
-		SDL_SetSurfaceBlendMode(image, SDL_BLENDMODE_BLEND) != 0) {
-		sdlperror("method_3_blit_mono: PS2 surface modulation");
-		quit(1);
-	}
-
-	SDL_Rect ps2_src_rect = {0, 0, w, h};
-	SDL_Rect ps2_dest_rect = {xpos, ypos, w, h};
-	if (SDL_BlitSurface(image, &ps2_src_rect, current_target_surface, &ps2_dest_rect) != 0) {
-		sdlperror("method_3_blit_mono: PS2 SDL_BlitSurface");
-		quit(1);
-	}
-
-	SDL_SetSurfaceColorMod(image, old_r, old_g, old_b);
-	SDL_SetSurfaceBlendMode(image, old_blend_mode);
-	return image;
-	#endif
-
 	if (SDL_SetColorKey(image, SDL_TRUE, 0) != 0) {
 		sdlperror("method_3_blit_mono: SDL_SetColorKey");
 		quit(1);
 	}
+	#ifdef __PS2__
+	// Reuse one ordinary ARGB surface instead of converting and freeing a new
+	// surface for every glyph. Direct color modulation is not used because the
+	// PS2 SDL backend rejects blend-mode changes on indexed font surfaces.
+	static SDL_Surface* ps2_mono_scratch = NULL;
+	if (ps2_mono_scratch == NULL || ps2_mono_scratch->w < w || ps2_mono_scratch->h < h) {
+		SDL_Surface* larger_scratch = SDL_CreateRGBSurfaceWithFormat(
+			0, w, h, 32, SDL_PIXELFORMAT_ARGB8888);
+		if (larger_scratch == NULL) {
+			sdlperror("method_3_blit_mono: PS2 scratch surface");
+			quit(1);
+		}
+		if (ps2_mono_scratch != NULL) SDL_FreeSurface(ps2_mono_scratch);
+		ps2_mono_scratch = larger_scratch;
+	}
+
+	SDL_Rect scratch_rect = {0, 0, w, h};
+	if (SDL_SetSurfaceBlendMode(ps2_mono_scratch, SDL_BLENDMODE_NONE) != 0 ||
+		SDL_FillRect(ps2_mono_scratch, &scratch_rect,
+			SDL_MapRGBA(ps2_mono_scratch->format, 0, 0, 0, 0)) != 0 ||
+		SDL_BlitSurface(image, NULL, ps2_mono_scratch, &scratch_rect) != 0) {
+		sdlperror("method_3_blit_mono: PS2 scratch preparation");
+		quit(1);
+	}
+	SDL_Surface* colored_image = ps2_mono_scratch;
+	#else
 	SDL_Surface* colored_image = SDL_ConvertSurfaceFormat(image, SDL_PIXELFORMAT_ARGB8888, 0);
+	if (colored_image == NULL) {
+		sdlperror("method_3_blit_mono: SDL_ConvertSurfaceFormat");
+		quit(1);
+	}
+	#endif
 
 	SDL_SetSurfaceBlendMode(colored_image, SDL_BLENDMODE_NONE);
 	/* Causes problems with SDL 2.0.5 (see #105)
@@ -3691,7 +3689,9 @@ image_type* method_3_blit_mono(image_type* image,int xpos,int ypos,int blitter,b
 		sdlperror("method_3_blit_mono: SDL_BlitSurface");
 		quit(1);
 	}
+	#ifndef __PS2__
 	SDL_FreeSurface(colored_image);
+	#endif
 
 	return image;
 }
