@@ -3625,8 +3625,10 @@ image_type* method_3_blit_mono(image_type* image,int xpos,int ypos,int blitter,b
 	// PS2 SDL backend rejects blend-mode changes on indexed font surfaces.
 	static SDL_Surface* ps2_mono_scratch = NULL;
 	if (ps2_mono_scratch == NULL || ps2_mono_scratch->w < w || ps2_mono_scratch->h < h) {
+		int scratch_width = MAX(w, ps2_mono_scratch != NULL ? ps2_mono_scratch->w : 0);
+		int scratch_height = MAX(h, ps2_mono_scratch != NULL ? ps2_mono_scratch->h : 0);
 		SDL_Surface* larger_scratch = SDL_CreateRGBSurfaceWithFormat(
-			0, w, h, 32, SDL_PIXELFORMAT_ARGB8888);
+			0, scratch_width, scratch_height, 32, SDL_PIXELFORMAT_ARGB8888);
 		if (larger_scratch == NULL) {
 			sdlperror("method_3_blit_mono: PS2 scratch surface");
 			quit(1);

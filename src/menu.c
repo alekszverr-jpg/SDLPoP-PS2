@@ -1663,6 +1663,9 @@ void turn_setting_on_off_with_sound(setting_type* setting, byte new_state) {
 int get_setting_value(setting_type* setting) {
 	int value = 0;
 	if (setting->linked != NULL) {
+		// Some links point into packed custom_options_type. In particular,
+		// first_level has an odd address; dereferencing it as word* traps on PS2.
+		// memcpy keeps multi-byte menu access safe on strict-alignment targets.
 		switch(setting->number_type) {
 			default:
 			case SETTING_BYTE:
@@ -1671,15 +1674,24 @@ int get_setting_value(setting_type* setting) {
 			case SETTING_SBYTE:
 				value = *(sbyte*) setting->linked;
 				break;
-			case SETTING_WORD:
-				value = *(word*) setting->linked;
+			case SETTING_WORD: {
+				word linked_value;
+				memcpy(&linked_value, setting->linked, sizeof(linked_value));
+				value = linked_value;
 				break;
-			case SETTING_SHORT:
-				value = *(short*) setting->linked;
+			}
+			case SETTING_SHORT: {
+				short linked_value;
+				memcpy(&linked_value, setting->linked, sizeof(linked_value));
+				value = linked_value;
 				break;
-			case SETTING_INT:
-				value = *(int*) setting->linked;
+			}
+			case SETTING_INT: {
+				int linked_value;
+				memcpy(&linked_value, setting->linked, sizeof(linked_value));
+				value = linked_value;
 				break;
+			}
 		}
 	}
 	return value;
@@ -1695,15 +1707,21 @@ void set_setting_value(setting_type* setting, int value) {
 			case SETTING_SBYTE:
 				*(sbyte*) setting->linked = (sbyte) value;
 				break;
-			case SETTING_WORD:
-				*(word*) setting->linked = (word) value;
+			case SETTING_WORD: {
+				word linked_value = (word) value;
+				memcpy(setting->linked, &linked_value, sizeof(linked_value));
 				break;
-			case SETTING_SHORT:
-				*(short*) setting->linked = (short) value;
+			}
+			case SETTING_SHORT: {
+				short linked_value = (short) value;
+				memcpy(setting->linked, &linked_value, sizeof(linked_value));
 				break;
-			case SETTING_INT:
-				*(int*) setting->linked = value;
+			}
+			case SETTING_INT: {
+				int linked_value = value;
+				memcpy(setting->linked, &linked_value, sizeof(linked_value));
 				break;
+			}
 		}
 	}
 }
