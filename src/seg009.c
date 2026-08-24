@@ -24,7 +24,26 @@ The authors of this program may be contacted at https://forum.princed.org
 #include <limits.h>
 
 #ifdef __PS2__
+#include <elf-loader.h>
+
 static void ps2_audio_log_stats(void);
+
+static const char* ps2_find_ulaunchelf(void) {
+	static const char* const candidates[] = {
+		"mc0:/BOOT/BOOT.ELF",
+		"mc1:/BOOT/BOOT.ELF",
+		"mass:/BOOT/BOOT.ELF",
+		"mass:/BOOT.ELF",
+	};
+
+	struct stat status;
+	for (size_t i = 0; i < COUNT(candidates); ++i) {
+		if (stat(candidates[i], &status) == 0 && S_ISREG(status.st_mode)) {
+			return candidates[i];
+		}
+	}
+	return NULL;
+}
 #endif
 
 #ifdef _WIN32
@@ -372,7 +391,30 @@ int round_xpos_to_byte(int xpos,int round_direction) {
 
 // seg009:0C7A
 void quit(int exit_code) {
+	#ifdef __PS2__
+	const char* ulaunchelf_path = NULL;
+	if (exit_code == 0 && ps2_exit_destination == 1) {
+		ulaunchelf_path = ps2_find_ulaunchelf();
+		if (ulaunchelf_path != NULL) {
+			ps2_boot_log("exit: launching uLaunchELF from %s", ulaunchelf_path);
+		} else {
+			ps2_boot_log("exit: uLaunchELF not found; falling back to PS2 Browser");
+		}
+	}
+	#endif
+
 	restore_stuff();
+
+	#ifdef __PS2__
+	if (ulaunchelf_path != NULL) {
+		char* launch_args[] = {(char*)ulaunchelf_path};
+		// PS2SDK's embedded ELF loader supports memory cards and USB, unlike
+		// the BIOS LoadExecPS2 syscall. It does not return on success.
+		int load_result = LoadELFFromFile(ulaunchelf_path, 1, launch_args);
+		ps2_boot_log("exit: uLaunchELF loader failed (%d); returning to PS2 Browser", load_result);
+	}
+	#endif
+
 	exit(exit_code);
 }
 

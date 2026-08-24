@@ -486,6 +486,9 @@ void set_options_to_default() {
 	enable_controller_rumble = 1;
 	joystick_only_horizontal = 1;
 	joystick_threshold = 8000;
+#ifdef __PS2__
+	ps2_exit_destination = 0;
+#endif
 	enable_quicksave = 1;
 	enable_quicksave_penalty = 1;
 	enable_replay = 1;

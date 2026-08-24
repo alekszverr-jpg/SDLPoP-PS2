@@ -163,6 +163,7 @@ enum setting_ids {
 	SETTING_ENABLE_CONTROLLER_RUMBLE,
 	SETTING_JOYSTICK_THRESHOLD,
 	SETTING_JOYSTICK_ONLY_HORIZONTAL,
+	SETTING_PS2_EXIT_DESTINATION,
 	SETTING_FULLSCREEN,
 	SETTING_PS2_VIDEO_MODE,
 	SETTING_PS2_SCREEN_WIDTH,
@@ -346,6 +347,10 @@ typedef struct setting_type {
 	names_list_type* names_list;
 } setting_type;
 
+#ifdef __PS2__
+NAMES_LIST(ps2_exit_destination_setting_names, {"PS2 Browser", "uLaunchELF",});
+#endif
+
 setting_type general_settings[] = {
 	#ifndef __PS2__
 		{.id = SETTING_SHOW_MENU_ON_PAUSE, .style = SETTING_STYLE_TOGGLE, .linked = &enable_pause_menu,
@@ -373,6 +378,15 @@ setting_type general_settings[] = {
 				.text = "Horizontal joystick movement only",
 				.explanation = "Use joysticks for horizontal movement only, not all-directional. "
 						"This may make the game easier to control for some controllers."},
+	#ifdef __PS2__
+		{.id = SETTING_PS2_EXIT_DESTINATION, .style = SETTING_STYLE_NUMBER, .number_type = SETTING_BYTE,
+				.linked = &ps2_exit_destination, .max = 1,
+				.names_list = &ps2_exit_destination_setting_names_list,
+				.text = "Exit destination",
+				.explanation = "Choose where QUIT GAME returns. uLaunchELF is searched for at "
+						"mc0:/BOOT/BOOT.ELF, then memory card slot 2 and USB. "
+						"If it cannot be started, the PS2 Browser opens instead."},
+	#endif
 		{.id = SETTING_RESET_ALL_SETTINGS, .style = SETTING_STYLE_TEXT_ONLY,
 				.text = "Restore defaults...", .explanation = "Revert all settings to the default state."},
 };
@@ -1478,7 +1492,7 @@ void pause_menu_clicked(pause_menu_item_type* item) {
 		case PAUSE_MENU_QUIT_GAME:
 			current_dialog_box = DIALOG_CONFIRM_QUIT;
 			#ifdef __PS2__
-			current_dialog_text = "Exit to PS2 Browser?";
+			current_dialog_text = ps2_exit_destination ? "Exit to uLaunchELF?" : "Exit to PS2 Browser?";
 			#else
 			current_dialog_text = "Quit SDLPoP?";
 			#endif
@@ -2169,6 +2183,7 @@ void confirmation_dialog_result(int which_dialog, int button) {
 			ps2_screen_height = 100;
 			ps2_screen_x = 0;
 			ps2_screen_y = 0;
+			ps2_exit_destination = 0;
 			ps2_apply_screen_adjustment();
 			ps2_set_video_mode(0);
 			#endif
@@ -2602,6 +2617,9 @@ void process_ingame_settings_user_managed(SDL_RWops* rw, rw_process_func_type pr
 	process(enable_controller_rumble);
 	process(joystick_threshold);
 	process(joystick_only_horizontal);
+	#ifdef __PS2__
+	process(ps2_exit_destination);
+	#endif
 	process(enable_replay);
 	process(start_fullscreen);
 	process(use_hardware_acceleration);
