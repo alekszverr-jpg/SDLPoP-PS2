@@ -99,7 +99,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist/SDLPoP-PS2
-          cp PRINCE.ELF title.cfg README.PS2.md COPYING dist/SDLPoP-PS2/
+          cp PRINCE.ELF title.cfg README.PS2.md RELEASE_NOTES.PS2.md COPYING dist/SDLPoP-PS2/
           (cd dist/SDLPoP-PS2 && sha256sum PRINCE.ELF > PRINCE.ELF.sha256)
           (cd dist && cmake -E tar cf SDLPoP-PS2.zip --format=zip SDLPoP-PS2)
 
@@ -108,7 +108,11 @@ jobs:
         run: |
           set -euo pipefail
           grep --text --quiet 'data/PRINCE/res1.bin' PRINCE.ELF
-          test "$(find dist/SDLPoP-PS2 -maxdepth 1 -type f | wc -l)" -eq 5
+          test "$(find dist/SDLPoP-PS2 -maxdepth 1 -type f | wc -l)" -eq 6
+          test -s dist/SDLPoP-PS2/README.PS2.md
+          test -s dist/SDLPoP-PS2/RELEASE_NOTES.PS2.md
+          test -s dist/SDLPoP-PS2/title.cfg
+          test -s dist/SDLPoP-PS2/COPYING
           test ! -e dist/SDLPoP-PS2/data
           test ! -e dist/SDLPoP-PS2/SDLPoP.ini
           (cd dist/SDLPoP-PS2 && sha256sum --check PRINCE.ELF.sha256)

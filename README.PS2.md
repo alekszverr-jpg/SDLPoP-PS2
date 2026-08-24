@@ -22,6 +22,11 @@ available. Without USB, the port falls back to `mc0:/SDLPoP-PS2`. This includes
 saves, Hall of Fame data, menu settings, video calibration and the diagnostic
 log.
 
+Under **Settings > General > Exit destination**, choose whether **QUIT GAME**
+returns to the PS2 Browser or starts uLaunchELF. The latter is searched for as
+`mc0:/BOOT/BOOT.ELF`, then on memory card slot 2 and USB. If it is missing or
+cannot be started, the port safely returns to the PS2 Browser.
+
 ## Video modes
 
 - The game always boots in safe 640x224 NTSC 240p, which is progressive and
@@ -44,8 +49,8 @@ modulation value, preventing the washed-out, approximately double-bright image
 produced by an unmodified SDL 2.32 PS2 renderer.
 
 The game writes normal saves, Hall of Fame data, quicksaves, menu settings and
-screen calibration next to the ELF. Use writable media if those features are
-needed.
+screen calibration to the selected storage directory described above. The ELF
+itself may therefore remain on a read-only SMB share.
 
 The PS2 build mixes audio at 12 kHz and lets audsrv perform its exact 4x
 conversion to the SPU2's native 48 kHz output. Music uses the compact DBOPL core
@@ -70,6 +75,10 @@ workload statistics for diagnosing real-time audio performance.
 The launch information screen and **Settings > Controls** use these PS2 button
 names instead of the original PC keyboard shortcuts.
 
+Menu navigation sounds are disabled in the PS2 build. Rapid scrolling used to
+queue repeated effects and could disturb otherwise stable music playback;
+gameplay sound effects and music are unchanged.
+
 ## Console settings layout
 
 - **Gameplay > Gameplay profile > Original DOS** preserves the original DOS
@@ -91,9 +100,10 @@ SDL2 and SDL2_image, contains the embedded game resources and produces a
 self-contained package with a valid checksum. Boot, gameplay,
 DualShock 2 input, 240p output, screen calibration and menu settings have been
 tested on a real PS2. Save paths, quicksave/quickload and exiting to PS2 Browser
-have also been verified on hardware. Audio timing with the lower-load DBOPL
-mixer has been verified on hardware; Hall of Fame entry and independent menu
-feedback have been verified in PCSX2. Hall of Fame persistence on a real console
-and 480p confirmation on a compatible display remain explicit hardware
-smoke-test items. The complete release-candidate matrix is tracked in
+or uLaunchELF have also been verified on hardware. USB storage selection and
+memory-card fallback both work on hardware. Audio timing with the lower-load
+DBOPL mixer has been verified on hardware; Hall of Fame entry and persistence
+have been verified in PCSX2. Hall of Fame persistence on a real console and
+480p confirmation on a compatible display remain explicit hardware smoke-test
+items. The complete release-candidate matrix is tracked in
 `RELEASE_CHECKLIST.PS2.md`.
