@@ -100,13 +100,29 @@ jobs:
           set -euo pipefail
           mkdir -p dist/SDLPoP-PS2
           cp BOOT.ELF title.cfg README.PS2.md COPYING dist/SDLPoP-PS2/
+          (cd dist/SDLPoP-PS2 && sha256sum BOOT.ELF > BOOT.ELF.sha256)
           (cd dist && cmake -E tar cf SDLPoP-PS2.zip --format=zip SDLPoP-PS2)
 
-      - name: Upload PS2 ELF and data
+      - name: Verify self-contained PS2 package
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep --text --quiet 'data/PRINCE/res1.bin' BOOT.ELF
+          test "$(find dist/SDLPoP-PS2 -maxdepth 1 -type f | wc -l)" -eq 5
+          test ! -e dist/SDLPoP-PS2/data
+          test ! -e dist/SDLPoP-PS2/SDLPoP.ini
+          (cd dist/SDLPoP-PS2 && sha256sum --check BOOT.ELF.sha256)
+          cmake -E tar tf dist/SDLPoP-PS2.zip | grep 'SDLPoP-PS2/BOOT.ELF' > /dev/null
+          if cmake -E tar tf dist/SDLPoP-PS2.zip | grep --extended-regexp '/(data/|SDLPoP.ini$)' > /dev/null; then
+            exit 1
+          fi
+
+      - name: Upload self-contained PS2 release candidate
         uses: actions/upload-artifact@v6
         with:
           name: SDLPoP-PS2
           path: |
             dist/SDLPoP-PS2.zip
             dist/SDLPoP-PS2/BOOT.ELF
+            dist/SDLPoP-PS2/BOOT.ELF.sha256
           if-no-files-found: error

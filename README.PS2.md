@@ -8,7 +8,7 @@ Actions; a local PS2SDK installation is not required.
 
 Open the **Build PlayStation 2** workflow in GitHub Actions and run it, or push
 a commit. Download the `SDLPoP-PS2` artifact when the job finishes. It contains
-`SDLPoP-PS2.zip` and a standalone `BOOT.ELF`.
+`SDLPoP-PS2.zip`, a standalone `BOOT.ELF` and its SHA-256 checksum.
 
 ## Run
 
@@ -87,11 +87,13 @@ names instead of the original PC keyboard shortcuts.
 ## Test status
 
 GitHub Actions verifies that the MIPS ELF links against the PS2 versions of
-SDL2 and SDL2_image and packages all runtime data. Boot, gameplay,
+SDL2 and SDL2_image, contains the embedded game resources and produces a
+self-contained package with a valid checksum. Boot, gameplay,
 DualShock 2 input, 240p output, screen calibration and menu settings have been
 tested on a real PS2. Save paths, quicksave/quickload and exiting to PS2 Browser
 have also been verified on hardware. Audio timing with the lower-load DBOPL
 mixer has been verified on hardware; Hall of Fame entry and independent menu
 feedback have been verified in PCSX2. Hall of Fame persistence on a real console
 and 480p confirmation on a compatible display remain explicit hardware
-smoke-test items.
+smoke-test items. The complete release-candidate matrix is tracked in
+`RELEASE_CHECKLIST.PS2.md`.
