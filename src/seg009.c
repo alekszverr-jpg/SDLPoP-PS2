@@ -2002,6 +2002,7 @@ int digi_remaining_length = 0;
 
 // The properties of the audio device.
 SDL_AudioSpec* digi_audiospec = NULL;
+int digi_unavailable = 0;
 // The desired samplerate. Everything will be resampled to this.
 #ifdef __PS2__
 // DBOPL leaves enough EE headroom to use the 24 kHz audsrv path. Compared with
@@ -2219,6 +2220,61 @@ extern unsigned int ps2_midi_last_fragment_count;
 extern unsigned int ps2_midi_last_generated_frames;
 extern unsigned int ps2_midi_last_active_voices;
 
+// Console UI feedback is deliberately separate from the original single
+// channel used by in-game effects. It is generated in the audio callback, so
+// holding the D-pad cannot repeatedly stop and restart a long gameplay sample.
+static unsigned int ps2_menu_click_phase;
+static unsigned int ps2_menu_click_frequency;
+static int ps2_menu_click_frames_left;
+static int ps2_menu_click_total_frames;
+
+void ps2_play_menu_click(int sound_id) {
+	init_digi();
+	if (digi_unavailable || digi_audiospec == NULL || !is_sound_on) return;
+
+	unsigned int frequency = 900;
+	int duration_ms = 22;
+	if (sound_id == sound_22_loose_shake_3) {
+		frequency = 1250;
+		duration_ms = 30;
+	} else if (sound_id == sound_10_sword_vs_sword) {
+		frequency = 650;
+		duration_ms = 38;
+	}
+
+	SDL_LockAudio();
+	ps2_menu_click_phase = 0;
+	ps2_menu_click_frequency = frequency;
+	ps2_menu_click_total_frames = MAX(1, digi_audiospec->freq * duration_ms / 1000);
+	ps2_menu_click_frames_left = ps2_menu_click_total_frames;
+	SDL_UnlockAudio();
+	SDL_PauseAudio(0);
+}
+
+static void ps2_mix_menu_click(Uint8* stream, int len) {
+	if (ps2_menu_click_frames_left <= 0 || ps2_menu_click_frequency == 0) return;
+
+	short* samples = (short*)stream;
+	int channels = digi_audiospec->channels;
+	int frames = len / ((int)sizeof(short) * channels);
+	int sample_rate = digi_audiospec->freq;
+	for (int frame = 0; frame < frames && ps2_menu_click_frames_left > 0; ++frame) {
+		// A quiet decaying square pulse stays distinct on CRT speakers without
+		// masking the OPL music underneath it.
+		int amplitude = 2800 * ps2_menu_click_frames_left / ps2_menu_click_total_frames;
+		int click_sample = ps2_menu_click_phase < (unsigned int)sample_rate / 2 ? amplitude : -amplitude;
+		for (int channel = 0; channel < channels; ++channel) {
+			int mixed = samples[frame * channels + channel] + click_sample;
+			samples[frame * channels + channel] = (short)MAX(-32768, MIN(mixed, 32767));
+		}
+		ps2_menu_click_phase += ps2_menu_click_frequency;
+		while (ps2_menu_click_phase >= (unsigned int)sample_rate) {
+			ps2_menu_click_phase -= (unsigned int)sample_rate;
+		}
+		--ps2_menu_click_frames_left;
+	}
+}
+
 static void ps2_audio_log_stats(void) {
 	if (digi_audiospec == NULL || ps2_audio_callback_count == 0) return;
 	SDL_LockAudio();
@@ -2309,6 +2365,9 @@ void audio_callback(void* userdata, Uint8* stream_orig, int len_orig) {
 	} else if (ogg_playing) {
 		ogg_callback(userdata, stream, len);
 	}
+	#ifdef __PS2__
+	ps2_mix_menu_click(stream, len);
+	#endif
 
 #ifdef USE_FAST_FORWARD
 	if (audio_speed > 1) {
@@ -2370,7 +2429,6 @@ void audio_callback(void* userdata, Uint8* stream_orig, int len_orig) {
 	#endif
 }
 
-int digi_unavailable = 0;
 void init_digi() {
 	if (digi_unavailable) return;
 	if (digi_audiospec != NULL) return;
@@ -2719,10 +2777,6 @@ void turn_sound_on_off(byte new_state) {
 // seg009:7299
 int check_sound_playing() {
 	return speaker_playing || digi_playing || midi_playing || ogg_playing;
-}
-
-int is_effect_sound_playing(int sound_id) {
-	return (digi_playing || speaker_playing) && current_sound == sound_id;
 }
 
 void apply_aspect_ratio() {

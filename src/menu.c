@@ -1360,9 +1360,11 @@ bool at_scroll_down_boundary; // When navigating down using keyboard/controller,
 
 void play_menu_sound(int sound_id) {
 	#ifdef __PS2__
-	// Navigation key repeat can arrive faster than the short sample can finish.
-	// Restarting the same buffer on every repeat makes it sound chopped and slow.
-	if (is_effect_sound_playing(sound_id)) return;
+	// Keep UI feedback independent from the normal one-channel game effect
+	// queue. Rapid navigation used to restart long loose-floor samples and made
+	// the menu sound as if the whole audio stream was slowing down.
+	ps2_play_menu_click(sound_id);
+	return;
 	#endif
 	play_sound(sound_id);
 	play_next_sound();
