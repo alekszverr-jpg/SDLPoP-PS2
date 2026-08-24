@@ -2522,11 +2522,11 @@ const char* get_writable_file_path(char* custom_path_buffer, size_t max_len, con
 #else
 	char save_path[POP_MAX_PATH] = "";
 	#ifdef __PS2__
-	// A PS2 launcher does not provide HOME. Keep every writable game file
-	// beside the ELF, just like SDLPoP.cfg and the video calibration file.
-	if (getcwd(save_path, sizeof(save_path)) == NULL) {
-		snprintf_check(save_path, sizeof(save_path), ".");
-	}
+	// Keep mutable files off the embedded read-only resource store. Prefer a
+	// USB drive, then fall back to the memory card in slot 1.
+	const char* selected_storage = ps2_storage_root();
+	if (selected_storage != NULL)
+		snprintf_check(save_path, sizeof(save_path), "%s", selected_storage);
 	#else
 	const char* custom_save_path = getenv("SDLPOP_SAVE_PATH");
 	const char* home_path = getenv("HOME");

@@ -82,7 +82,26 @@ set(SOURCE_FILES
         )
 
 if(PS2)
-    list(APPEND SOURCE_FILES dbopl.c dbopl.h)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    set(PS2_EMBEDDED_ASSETS_C "${CMAKE_CURRENT_BINARY_DIR}/ps2_embedded_assets_data.c")
+    file(GLOB_RECURSE PS2_EMBEDDED_INPUTS CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/../data/*")
+    add_custom_command(
+        OUTPUT "${PS2_EMBEDDED_ASSETS_C}"
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/../ps2/generate_embedded_assets.py"
+            --data "${CMAKE_SOURCE_DIR}/../data"
+            --ini "${CMAKE_SOURCE_DIR}/../SDLPoP.ini"
+            --output "${PS2_EMBEDDED_ASSETS_C}"
+        DEPENDS
+            "${CMAKE_SOURCE_DIR}/../ps2/generate_embedded_assets.py"
+            "${CMAKE_SOURCE_DIR}/../SDLPoP.ini"
+            ${PS2_EMBEDDED_INPUTS}
+        VERBATIM
+    )
+    list(APPEND SOURCE_FILES
+        dbopl.c dbopl.h
+        ps2_embedded_assets.c ps2_embedded_assets.h
+        "${PS2_EMBEDDED_ASSETS_C}"
+    )
 else()
     list(APPEND SOURCE_FILES opl3.c opl3.h)
 endif()

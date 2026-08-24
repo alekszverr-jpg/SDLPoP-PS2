@@ -59,6 +59,7 @@ extern "C" {
 #include "config.h"
 
 #ifdef __PS2__
+#include "ps2_embedded_assets.h"
 void ps2_boot_log(const char* format, ...);
 void ps2_boot_fatal(const char* message);
 #else

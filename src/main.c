@@ -46,7 +46,9 @@ void reset_IOP(void) {
 }
 
 void ps2_boot_log(const char* format, ...) {
-	FILE* fp = fopen("SDLPoP-PS2.log", "a");
+	if (ps2_storage_root() == NULL) return;
+	char log_path[POP_MAX_PATH];
+	FILE* fp = fopen(ps2_storage_path("SDLPoP-PS2.log", log_path, sizeof(log_path)), "a");
 	if (fp == NULL) return;
 	va_list args;
 	va_start(args, format);
@@ -60,21 +62,11 @@ void ps2_boot_fatal(const char* message) {
 	ps2_boot_log("FATAL: %s", message);
 	init_scr();
 	scr_printf("SDLPoP PS2 startup error\n\n%s\n\n", message);
-	scr_printf("See SDLPoP-PS2.log beside BOOT.ELF.\n");
+	if (ps2_storage_root() != NULL)
+		scr_printf("See %s/SDLPoP-PS2.log.\n", ps2_storage_root());
 	SleepThread();
 }
 
-static int ps2_wait_for_game_data(void) {
-	struct stat path_stat;
-	for (int attempt = 0; attempt < 150; ++attempt) {
-		if (stat("data/PRINCE", &path_stat) == 0 && S_ISDIR(path_stat.st_mode)) {
-			return attempt;
-		}
-		if ((attempt % 10) == 0) scr_printf(".");
-		DelayThread(100000);
-	}
-	return -1;
-}
 #endif
 
 
@@ -99,17 +91,21 @@ int main(int argc, char *argv[])
 	getcwd(cwd, sizeof(cwd));
 	scr_printf("[3/3] Application reached.\n");
 	scr_printf("Path: %s\n", cwd);
-	scr_printf("Waiting for data/PRINCE");
-	int data_wait_attempts = ps2_wait_for_game_data();
-	if (data_wait_attempts < 0) {
-		ps2_boot_fatal("USB is mounted, but data/PRINCE was not found after 15 seconds.");
+	scr_printf("Checking embedded game data...\n");
+	if (!ps2_embedded_directory_exists("data/PRINCE")) {
+		ps2_boot_fatal("Embedded game resources are missing or corrupt.");
 	}
-	FILE* log_file = fopen("SDLPoP-PS2.log", "w");
+	if (!ps2_storage_init()) {
+		ps2_boot_fatal("Cannot write to USB or memory card slot 1.");
+	}
+	char log_path[POP_MAX_PATH];
+	FILE* log_file = fopen(ps2_storage_path("SDLPoP-PS2.log", log_path, sizeof(log_path)), "w");
 	if (log_file != NULL) fclose(log_file);
 	ps2_boot_log("build: %s", SDLPOP_BUILD_ID);
 	ps2_boot_log("main: cwd=%s argv0=%s", cwd, argc > 0 && argv[0] != NULL ? argv[0] : "(none)");
-	ps2_boot_log("main: data/PRINCE ready after %d ms", data_wait_attempts * 100);
-	scr_printf("\nGame data found after %d ms.\nStarting SDL...\n", data_wait_attempts * 100);
+	ps2_boot_log("main: embedded assets=%u bytes storage=%s",
+		(unsigned int)ps2_embedded_asset_blob_size, ps2_storage_root());
+	scr_printf("Game data ready.\nSave storage: %s\nStarting SDL...\n", ps2_storage_root());
 #endif
 	pop_main();
 	return 0;

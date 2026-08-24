@@ -32,7 +32,12 @@ const Uint8 ambient_level = 128;
 void init_lighting() {
 	if (!enable_lighting) return;
 
+	#ifdef __PS2__
+	SDL_RWops* mask_rw = ps2_embedded_asset_rwops(mask_filename);
+	lighting_mask = mask_rw != NULL ? IMG_Load_RW(mask_rw, 1) : NULL;
+	#else
 	lighting_mask = IMG_Load(locate_file(mask_filename));
+	#endif
 	if (lighting_mask == NULL) {
 		sdlperror("IMG_Load (lighting_mask)");
 		enable_lighting = 0;

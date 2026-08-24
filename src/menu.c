@@ -2710,7 +2710,11 @@ void load_ingame_settings(void) {
 	// We want the SDLPoP.cfg file (in-game menu settings) to override the SDLPoP.ini file,
 	// but ONLY if the .ini file wasn't modified since the last time the .cfg file was saved!
 	struct stat st_ini, st_cfg;
+	#ifdef __PS2__
+	const char* cfg_filename = locate_save_file("SDLPoP.cfg");
+	#else
 	const char* cfg_filename = locate_file("SDLPoP.cfg");
+	#endif
 	const char* ini_filename = locate_file("SDLPoP.ini");
 	if (stat( cfg_filename, &st_cfg ) == 0 && stat( ini_filename, &st_ini ) == 0) {
 		if (st_ini.st_mtime > st_cfg.st_mtime ) {

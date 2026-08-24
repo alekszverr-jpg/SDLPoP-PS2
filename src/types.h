@@ -455,6 +455,10 @@ typedef struct dat_type {
 	FILE* handle;
 	char filename[POP_MAX_PATH];
 	dat_table_type* dat_table;
+	#ifdef __PS2__
+	const byte* embedded_data;
+	size_t embedded_size;
+	#endif
 	// handle and dat_table are NULL if the DAT is a directory.
 } dat_type;
 

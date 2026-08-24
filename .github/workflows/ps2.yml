@@ -39,6 +39,9 @@ jobs:
           set -euo pipefail
           git clone --depth 1 --branch release-2.32.10 https://github.com/libsdl-org/SDL.git /tmp/SDL2
           cmake \
+            -DSDL_PS2_MAIN_SOURCE=/tmp/SDL2/src/main/ps2/SDL_ps2_main.c \
+            -P "$GITHUB_WORKSPACE/ps2/patch_sdl2_main.cmake"
+          cmake \
             -DSDL_PS2_AUDIO_SOURCE=/tmp/SDL2/src/audio/ps2/SDL_ps2audio.c \
             -P "$GITHUB_WORKSPACE/ps2/patch_sdl2_audio.cmake"
           cmake \
@@ -96,8 +99,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist/SDLPoP-PS2
-          cp BOOT.ELF SDLPoP.ini README.PS2.md COPYING dist/SDLPoP-PS2/
-          cp -R data dist/SDLPoP-PS2/data
+          cp BOOT.ELF title.cfg README.PS2.md COPYING dist/SDLPoP-PS2/
           (cd dist && cmake -E tar cf SDLPoP-PS2.zip --format=zip SDLPoP-PS2)
 
       - name: Upload PS2 ELF and data

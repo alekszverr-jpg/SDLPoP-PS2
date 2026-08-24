@@ -12,10 +12,15 @@ a commit. Download the `SDLPoP-PS2` artifact when the job finishes. It contains
 
 ## Run
 
-Extract the complete `SDLPoP-PS2` directory to a PS2-accessible device. Keep
-`BOOT.ELF`, `SDLPoP.ini` and the `data` directory together. Start `BOOT.ELF`
-with wLaunchELF or another homebrew launcher. SDL2 mounts and waits for the
-launch device, including `mass:`, `host:`, memory card and optical media.
+`BOOT.ELF` contains all game resources and does not need an external `data`
+directory or `SDLPoP.ini`. Start it with wLaunchELF, or place `BOOT.ELF` and
+`title.cfg` together under OPL's `APPS/SDLPoP-PS2` directory. This also allows
+OPL to load the application itself from an SMB share.
+
+Mutable files are stored in `mass:/SDLPoP-PS2` when a writable USB drive is
+available. Without USB, the port falls back to `mc0:/SDLPoP-PS2`. This includes
+saves, Hall of Fame data, menu settings, video calibration and the diagnostic
+log.
 
 ## Video modes
 

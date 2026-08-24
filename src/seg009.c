@@ -21,6 +21,7 @@ The authors of this program may be contacted at https://forum.princed.org
 #include "common.h"
 #include <time.h>
 #include <errno.h>
+#include <limits.h>
 
 #ifdef __PS2__
 static void ps2_audio_log_stats(void);
@@ -118,6 +119,9 @@ void find_share_dir(void) {
 #endif
 
 bool file_exists(const char* filename) {
+	#ifdef __PS2__
+	if (ps2_embedded_asset_exists(filename) || ps2_embedded_directory_exists(filename)) return true;
+	#endif
 	return (access(filename, F_OK) != -1);
 }
 
@@ -142,6 +146,9 @@ const char* locate_save_file_(const char* filename, char* dst, int size) {
 	// Always leave the caller with a valid relative fallback. On platforms
 	// without a writable home directory the loop below may not find a target.
 	snprintf_check(dst, size, "%s", filename);
+	#ifdef __PS2__
+	return ps2_storage_path(filename, dst, (size_t)size);
+	#endif
 	find_exe_dir();
 #if defined WIN32 || _WIN32 || WIN64 || _WIN64
 	snprintf_check(dst, size, "%s/%s", exe_dir, filename);
@@ -161,6 +168,9 @@ const char* locate_save_file_(const char* filename, char* dst, int size) {
 	return (const char*) dst;
 }
 const char* locate_file_(const char* filename, char* path_buffer, int buffer_size) {
+	#ifdef __PS2__
+	if (ps2_embedded_asset_exists(filename) || ps2_embedded_directory_exists(filename)) return filename;
+	#endif
 	if(file_exists(filename)) {
 		return filename;
 	} else {
@@ -466,6 +476,15 @@ int showmessage(char* text,int arg_4,void* arg_0);
 // seg009:0F58
 dat_type* open_dat(const char* filename, int optional) {
 	FILE* fp = NULL;
+	#ifdef __PS2__
+	const byte* embedded_dat = NULL;
+	size_t embedded_dat_size = 0;
+	if (!use_custom_levelset || !skip_normal_data_files) {
+		char embedded_path[POP_MAX_PATH];
+		snprintf_check(embedded_path, sizeof(embedded_path), "data/%s", filename);
+		embedded_dat = ps2_embedded_asset_find(embedded_path, &embedded_dat_size);
+	}
+	#else
 	if (!use_custom_levelset) {
 		fp = open_dat_from_root_or_data_dir(filename);
 	}
@@ -484,6 +503,7 @@ dat_type* open_dat(const char* filename, int optional) {
 			fp = open_dat_from_root_or_data_dir(filename);
 		}
 	}
+	#endif
 	dat_header_type dat_header;
 	dat_table_type* dat_table = NULL;
 
@@ -492,6 +512,21 @@ dat_type* open_dat(const char* filename, int optional) {
 	pointer->next_dat = dat_chain_ptr;
 	dat_chain_ptr = pointer;
 
+	#ifdef __PS2__
+	if (embedded_dat != NULL) {
+		if (embedded_dat_size < sizeof(dat_header)) goto failed;
+		memcpy(&dat_header, embedded_dat, sizeof(dat_header));
+		size_t table_offset = SDL_SwapLE32(dat_header.table_offset);
+		size_t table_size = SDL_SwapLE16(dat_header.table_size);
+		if (table_offset > embedded_dat_size || table_size > embedded_dat_size - table_offset) goto failed;
+		dat_table = (dat_table_type*) malloc(table_size);
+		if (dat_table == NULL) goto failed;
+		memcpy(dat_table, embedded_dat + table_offset, table_size);
+		pointer->embedded_data = embedded_dat;
+		pointer->embedded_size = embedded_dat_size;
+		pointer->dat_table = dat_table;
+	} else
+	#endif
 	if (fp != NULL) {
 		if (fread(&dat_header, 6, 1, fp) != 1)
 			goto failed;
@@ -516,10 +551,14 @@ dat_type* open_dat(const char* filename, int optional) {
 		}
 		char foldername[POP_MAX_PATH];
 		snprintf_check(foldername,sizeof(foldername),"data/%s",filename_no_ext);
+		#ifdef __PS2__
+		if (!ps2_embedded_directory_exists(foldername)) {
+		#else
 		const char* data_path = locate_file(foldername);
 		struct stat path_stat;
 		int result = stat(data_path, &path_stat);
 		if (result != 0 || !S_ISDIR(path_stat.st_mode)) {
+		#endif
 			char error_message[256];
 			#ifdef __PS2__
 			snprintf_check(error_message, sizeof(error_message), "Cannot find a required data file: %s or folder: %s\nPress Cross to quit.", filename, foldername);
@@ -2511,6 +2550,29 @@ const int sound_channel = 0;
 const int max_sound_id = 58;
 
 void load_sound_names() {
+	#ifdef __PS2__
+	if (sound_names != NULL) return;
+	size_t contents_size = 0;
+	const unsigned char* contents = ps2_embedded_asset_find("data/music/names.txt", &contents_size);
+	if (contents == NULL) return;
+	sound_names = (char**) calloc(sizeof(char*) * max_sound_id, 1);
+	size_t position = 0;
+	while (position < contents_size) {
+		char line[POP_MAX_PATH + 16];
+		size_t line_size = 0;
+		while (position < contents_size && contents[position] != '\n' && line_size + 1 < sizeof(line)) {
+			line[line_size++] = (char)contents[position++];
+		}
+		while (position < contents_size && contents[position] != '\n') position++;
+		if (position < contents_size && contents[position] == '\n') position++;
+		line[line_size] = '\0';
+		int index;
+		char name[POP_MAX_PATH];
+		if (sscanf(line, "%d=%255s", &index, name) == 2 && index >= 0 && index < max_sound_id) {
+			sound_names[index] = strdup(name);
+		}
+	}
+	#else
 	const char* names_path = locate_file("data/music/names.txt");
 	if (sound_names != NULL) return;
 	FILE* fp = fopen(names_path,"rt");
@@ -2530,6 +2592,7 @@ void load_sound_names() {
 		}
 	}
 	fclose(fp);
+	#endif
 }
 
 char* sound_name(int index) {
@@ -3115,7 +3178,12 @@ void set_gr_mode(byte grmode) {
 #endif
 	}
 
+	#ifdef __PS2__
+	SDL_RWops* icon_rw = ps2_embedded_asset_rwops("data/icon.png");
+	SDL_Surface* icon = icon_rw != NULL ? IMG_Load_RW(icon_rw, 1) : NULL;
+	#else
 	SDL_Surface* icon = IMG_Load(locate_file("data/icon.png"));
+	#endif
 	if (icon == NULL) {
 		sdlperror("set_gr_mode: Could not load icon");
 	} else {
@@ -3346,13 +3414,36 @@ int get_text_color(int cga_color,int low_half,int high_half_mask) {
 	}
 }
 
-void load_from_opendats_metadata(int resource_id, const char* extension, FILE** out_fp, data_location* result, byte* checksum, int* size, dat_type** out_pointer) {
+void load_from_opendats_metadata(int resource_id, const char* extension, FILE** out_fp,
+		const byte** out_embedded, data_location* result, byte* checksum, int* size, dat_type** out_pointer) {
 	char image_filename[POP_MAX_PATH];
 	FILE* fp = NULL;
+	const byte* embedded = NULL;
 	*result = data_none;
 	// Go through all open DAT files.
-	for (dat_type* pointer = dat_chain_ptr; fp == NULL && pointer != NULL; pointer = pointer->next_dat) {
+	for (dat_type* pointer = dat_chain_ptr; fp == NULL && embedded == NULL && pointer != NULL; pointer = pointer->next_dat) {
 		*out_pointer = pointer;
+		#ifdef __PS2__
+		if (pointer->embedded_data != NULL) {
+			dat_table_type* dat_table = pointer->dat_table;
+			int i;
+			for (i = 0; i < SDL_SwapLE16(dat_table->res_count); ++i) {
+				if (SDL_SwapLE16(dat_table->entries[i].id) == resource_id) break;
+			}
+			if (i < SDL_SwapLE16(dat_table->res_count)) {
+				size_t offset = SDL_SwapLE32(dat_table->entries[i].offset);
+				size_t resource_size = SDL_SwapLE16(dat_table->entries[i].size);
+				if (strcmp(extension, "png") == 0 && resource_size <= 2) {
+					*result = data_none;
+				} else if (offset < pointer->embedded_size && resource_size <= pointer->embedded_size - offset - 1) {
+					*checksum = pointer->embedded_data[offset];
+					embedded = pointer->embedded_data + offset + 1;
+					*size = (int)resource_size;
+					*result = data_DAT;
+				}
+			}
+		} else
+		#endif
 		if (pointer->handle != NULL) {
 			// If it's an actual DAT file:
 			fp = pointer->handle;
@@ -3397,6 +3488,14 @@ void load_from_opendats_metadata(int resource_id, const char* extension, FILE** 
 				filename_no_ext[len-4] = '\0'; // terminate, so ".DAT" is deleted from the filename
 			}
 			snprintf_check(image_filename,sizeof(image_filename),"data/%s/res%d.%s",filename_no_ext, resource_id, extension);
+			#ifdef __PS2__
+			size_t embedded_size = 0;
+			embedded = ps2_embedded_asset_find(image_filename, &embedded_size);
+			if (embedded != NULL && embedded_size <= INT_MAX) {
+				*result = data_directory;
+				*size = (int)embedded_size;
+			}
+			#else
 			if (!use_custom_levelset) {
 				//printf("loading (binary) %s",image_filename);
 				fp = fopen(locate_file(image_filename), "rb");
@@ -3413,6 +3512,7 @@ void load_from_opendats_metadata(int resource_id, const char* extension, FILE** 
 					fp = fopen(locate_file(image_filename), "rb");
 				}
 			}
+			#endif
 
 			if (fp != NULL) {
 				struct stat buf;
@@ -3429,7 +3529,8 @@ void load_from_opendats_metadata(int resource_id, const char* extension, FILE** 
 		}
 	}
 	*out_fp = fp;
-	if (fp == NULL) {
+	*out_embedded = embedded;
+	if (fp == NULL && embedded == NULL) {
 		*result = data_none;
 //		printf(" FAILED\n");
 		//return NULL;
@@ -3464,13 +3565,16 @@ void *load_from_opendats_alloc(int resource, const char* extension, data_locatio
 	byte checksum;
 	int size;
 	FILE* fp = NULL;
-	load_from_opendats_metadata(resource, extension, &fp, &result, &checksum, &size, &pointer);
+	const byte* embedded = NULL;
+	load_from_opendats_metadata(resource, extension, &fp, &embedded, &result, &checksum, &size, &pointer);
 	if (out_result != NULL) *out_result = result;
 	if (out_size != NULL) *out_size = size;
 	if (result == data_none) return NULL;
 	void* area = malloc(size);
 	//read(fd, area, size);
-	if (fread(area, size, 1, fp) != 1) {
+	if (embedded != NULL) {
+		memcpy(area, embedded, size);
+	} else if (fread(area, size, 1, fp) != 1) {
 		fprintf(stderr, "%s: %s, resource %d, size %d, failed: %s\n",
 			__func__, pointer->filename, resource,
 			size, strerror(errno));
@@ -3491,9 +3595,12 @@ int load_from_opendats_to_area(int resource,void* area,int length, const char* e
 	byte checksum;
 	int size;
 	FILE* fp = NULL;
-	load_from_opendats_metadata(resource, extension, &fp, &result, &checksum, &size, &pointer);
+	const byte* embedded = NULL;
+	load_from_opendats_metadata(resource, extension, &fp, &embedded, &result, &checksum, &size, &pointer);
 	if (result == data_none) return 0;
-	if (fread(area, MIN(size, length), 1, fp) != 1) {
+	if (embedded != NULL) {
+		memcpy(area, embedded, MIN(size, length));
+	} else if (fread(area, MIN(size, length), 1, fp) != 1) {
 		fprintf(stderr, "%s: %s, resource %d, size %d, failed: %s\n",
 			__func__, pointer->filename, resource,
 			size, strerror(errno));
