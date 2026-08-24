@@ -2420,8 +2420,8 @@ int need_full_menu_redraw_count;
 #ifdef __PS2__
 void draw_hall_of_fame_dialog(void) {
 	font_type* saved_font = textstate.ptr_font;
-	rgb_type saved_palette[COUNT(palette)];
-	memcpy(saved_palette, palette, sizeof(saved_palette));
+	rgb_type saved_palette[256];
+	read_palette_256(saved_palette);
 
 	textstate.ptr_font = &hc_font;
 	load_title_images(0);
@@ -2450,7 +2450,7 @@ void draw_hall_of_fame_dialog(void) {
 	}
 
 	release_title_images();
-	memcpy(palette, saved_palette, sizeof(saved_palette));
+	set_pal_256(saved_palette);
 	textstate.ptr_font = saved_font;
 	clear_menu_controls();
 	need_full_menu_redraw_count = 2;

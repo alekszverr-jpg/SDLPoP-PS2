@@ -2066,7 +2066,15 @@ void show_title() {
 	free_surface(offscreen_surface);
 	offscreen_surface = NULL; // added
 	release_title_images();
+	#ifdef __PS2__
+	// Level 0 is the scripted DOS attract-mode demo. It is not stable in the
+	// PS2 build, so an unattended title cycle starts over instead of entering
+	// the demo. This does not affect starting a normal game from the title.
+	start_level = -1;
+	start_game();
+	#else
 	init_game(0);
+	#endif
 }
 
 Uint64 last_transition_counter;
