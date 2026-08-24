@@ -45,5 +45,5 @@ The release ZIP also includes `BOOT.ELF.sha256` for integrity verification.
 - 480p requires a compatible television or monitor and cable.
 - External resource packs and mods are not loaded by the PS2 build; the stock
   game resources are compiled into the ELF.
-- Real-hardware SMB boot and memory-card fallback remain final release-candidate
-  smoke tests.
+- USB save-directory selection and memory-card fallback remain final
+  release-candidate smoke tests.

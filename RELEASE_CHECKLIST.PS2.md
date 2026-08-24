@@ -12,6 +12,7 @@
 
 - [x] Boot and gameplay in 240p.
 - [x] Self-contained ELF starts without an external `data` directory.
+- [x] `BOOT.ELF` starts from the OPL Apps menu over SMB.
 - [x] DualShock 2 input, including the corrected R1 action mapping.
 - [x] Screen size and position calibration.
 - [x] Game saves and quicksave/quickload.
@@ -27,7 +28,6 @@
 
 ## Final smoke tests
 
-- [ ] Start `BOOT.ELF` from the OPL Apps menu over SMB.
 - [ ] With USB connected, confirm files are created in `mass:/SDLPoP-PS2`.
 - [ ] Without USB, confirm files are created in `mc0:/SDLPoP-PS2`.
 - [ ] Confirm Hall of Fame persistence on real hardware.
