@@ -38,16 +38,28 @@ void load_arrowhead_images(void) {
 	dat_pal.vga[1].r = dat_pal.vga[1].g = dat_pal.vga[1].b = 0x3F; // white
 	if (arrowhead_up_image == NULL) {
 		arrowhead_up_image = decode_image((image_data_type*) arrowhead_up_image_data, &dat_pal);
+		if (arrowhead_up_image != NULL && SDL_SetColorKey(arrowhead_up_image, SDL_TRUE, 0) != 0) {
+			sdlperror("load_arrowhead_images: up color key");
+		}
 	}
 	if (arrowhead_down_image == NULL) {
 		arrowhead_down_image = decode_image((image_data_type*) arrowhead_down_image_data, &dat_pal);
+		if (arrowhead_down_image != NULL && SDL_SetColorKey(arrowhead_down_image, SDL_TRUE, 0) != 0) {
+			sdlperror("load_arrowhead_images: down color key");
+		}
 	}
 //	dat_pal.vga[1] = vga_palette[color_7_lightgray];
 	if (arrowhead_left_image == NULL) {
 		arrowhead_left_image = decode_image((image_data_type*) arrowhead_left_image_data, &dat_pal);
+		if (arrowhead_left_image != NULL && SDL_SetColorKey(arrowhead_left_image, SDL_TRUE, 0) != 0) {
+			sdlperror("load_arrowhead_images: left color key");
+		}
 	}
 	if (arrowhead_right_image == NULL) {
 		arrowhead_right_image = decode_image((image_data_type*) arrowhead_right_image_data, &dat_pal);
+		if (arrowhead_right_image != NULL && SDL_SetColorKey(arrowhead_right_image, SDL_TRUE, 0) != 0) {
+			sdlperror("load_arrowhead_images: right color key");
+		}
 	}
 }
 
@@ -1756,9 +1768,9 @@ void draw_setting_explanation(setting_type* setting) {
 }
 
 void draw_image_with_blending(image_type* image, int xpos, int ypos) {
+	if (image == NULL) return;
 	SDL_Rect src_rect = {0, 0, image->w, image->h};
 	SDL_Rect dest_rect = {xpos, ypos, image->w, image->h};
-	SDL_SetColorKey(image, SDL_TRUE, 0);
 	if (SDL_BlitSurface(image, &src_rect, current_target_surface, &dest_rect) != 0) {
 		sdlperror("SDL_BlitSurface");
 		quit(1);
@@ -2022,6 +2034,12 @@ void menu_scroll(int y) {
 
 void draw_settings_area(settings_area_type* settings_area) {
 	if (settings_area == NULL) return;
+	if (settings_area->setting_count <= 0) {
+		scroll_position = 0;
+		return;
+	}
+	const int max_scroll = MAX(0, settings_area->setting_count - 9);
+	scroll_position = MIN(MAX(0, scroll_position), max_scroll);
 	rect_type settings_area_rect = {0, 80, 170, 320};
 	shrink2_rect(&settings_area_rect, &settings_area_rect, 20, 20);
 
@@ -2038,7 +2056,7 @@ void draw_settings_area(settings_area_type* settings_area) {
 
 	int y_offset = start_y_offset;
 	int num_drawn_settings = 0;
-	int first_visible_setting = MIN(MAX(0, scroll_position), MAX(0, settings_area->setting_count - 1));
+	int first_visible_setting = scroll_position;
 	for (int i = first_visible_setting; (i < settings_area->setting_count) && (num_drawn_settings < 9); ++i) {
 		++num_drawn_settings;
 		draw_setting(&settings_area->settings[i], &settings_area_rect, &y_offset, color_15_brightwhite);

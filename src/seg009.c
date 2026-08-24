@@ -3614,6 +3614,40 @@ void method_1_blit_rect(surface_type* target_surface,surface_type* source_surfac
 image_type* method_3_blit_mono(image_type* image,int xpos,int ypos,int blitter,byte color) {
 	int w = image->w;
 	int h = image->h;
+
+	#ifdef __PS2__
+	// The generic renderer converts and frees a temporary 32-bit surface for
+	// every glyph. A settings-menu redraw contains hundreds of glyphs, so rapid
+	// scrolling eventually fragments the PS2 heap and can stall SDL. The source
+	// images already have their color key configured when they are loaded; SDL's
+	// color modulation can tint and blit them without allocating a surface.
+	rgb_type ps2_palette_color = palette[color];
+	Uint8 old_r = 255, old_g = 255, old_b = 255;
+	SDL_BlendMode old_blend_mode = SDL_BLENDMODE_NONE;
+	SDL_GetSurfaceColorMod(image, &old_r, &old_g, &old_b);
+	SDL_GetSurfaceBlendMode(image, &old_blend_mode);
+
+	if (SDL_SetSurfaceColorMod(image,
+			ps2_palette_color.r << 2,
+			ps2_palette_color.g << 2,
+			ps2_palette_color.b << 2) != 0 ||
+		SDL_SetSurfaceBlendMode(image, SDL_BLENDMODE_BLEND) != 0) {
+		sdlperror("method_3_blit_mono: PS2 surface modulation");
+		quit(1);
+	}
+
+	SDL_Rect ps2_src_rect = {0, 0, w, h};
+	SDL_Rect ps2_dest_rect = {xpos, ypos, w, h};
+	if (SDL_BlitSurface(image, &ps2_src_rect, current_target_surface, &ps2_dest_rect) != 0) {
+		sdlperror("method_3_blit_mono: PS2 SDL_BlitSurface");
+		quit(1);
+	}
+
+	SDL_SetSurfaceColorMod(image, old_r, old_g, old_b);
+	SDL_SetSurfaceBlendMode(image, old_blend_mode);
+	return image;
+	#endif
+
 	if (SDL_SetColorKey(image, SDL_TRUE, 0) != 0) {
 		sdlperror("method_3_blit_mono: SDL_SetColorKey");
 		quit(1);
