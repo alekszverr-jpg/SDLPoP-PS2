@@ -29,6 +29,6 @@
 ## Final smoke tests
 
 - [ ] With USB connected, confirm files are created in `mass:/SDLPoP-PS2`.
-- [ ] Without USB, confirm files are created in `mc0:/SDLPoP-PS2`.
+- [x] Without USB, confirm files are created in `mc0:/SDLPoP-PS2`.
 - [ ] Confirm Hall of Fame persistence on real hardware.
 - [ ] If a compatible display is available, confirm accepted 480p persists.

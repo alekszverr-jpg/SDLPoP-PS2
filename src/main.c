@@ -30,19 +30,34 @@ The authors of this program may be contacted at https://forum.princed.org
 #include <sys/stat.h>
 #include <unistd.h>
 
+static void ps2_boot_screen_init(void) {
+	init_scr();
+	scr_setCursor(0);
+	scr_setXY(4, 2);
+}
+
+static void ps2_boot_printf(const char* format, ...) {
+	scr_setXY(4, scr_getY());
+	va_list args;
+	va_start(args, format);
+	scr_vprintf(format, args);
+	va_end(args);
+}
+
 // SDL2main calls this weak hook before it initializes the launch-device
 // drivers. Keeping the standard reset sequence here lets us display progress
 // even if the real console stalls before SDL_main is reached.
 void reset_IOP(void) {
-	init_scr();
-	scr_printf("Prince of Persia for PlayStation 2\n\n");
-	scr_printf("[1/3] Resetting IOP...\n");
+	ps2_boot_screen_init();
+	ps2_boot_printf("Prince of Persia for PlayStation 2\n");
+	scr_printf("\n");
+	ps2_boot_printf("[1/3] Resetting IOP...\n");
 	SifInitRpc(0);
 	while (!SifIopReset(NULL, 0)) {
 	}
 	while (!SifIopSync()) {
 	}
-	scr_printf("[2/3] IOP reset complete. Mounting devices...\n");
+	ps2_boot_printf("[2/3] IOP reset complete. Mounting devices...\n");
 }
 
 void ps2_boot_log(const char* format, ...) {
@@ -60,10 +75,13 @@ void ps2_boot_log(const char* format, ...) {
 
 void ps2_boot_fatal(const char* message) {
 	ps2_boot_log("FATAL: %s", message);
-	init_scr();
-	scr_printf("SDLPoP PS2 startup error\n\n%s\n\n", message);
+	ps2_boot_screen_init();
+	ps2_boot_printf("SDLPoP PS2 startup error\n");
+	scr_printf("\n");
+	ps2_boot_printf("%s\n", message);
+	scr_printf("\n");
 	if (ps2_storage_root() != NULL)
-		scr_printf("See %s/SDLPoP-PS2.log.\n", ps2_storage_root());
+		ps2_boot_printf("See %s/SDLPoP-PS2.log.\n", ps2_storage_root());
 	SleepThread();
 }
 
@@ -89,12 +107,13 @@ int main(int argc, char *argv[])
 #ifdef __PS2__
 	char cwd[POP_MAX_PATH] = ".";
 	getcwd(cwd, sizeof(cwd));
-	scr_printf("[3/3] Application reached.\n");
-	scr_printf("Path: %s\n", cwd);
-	scr_printf("Checking embedded game data...\n");
+	ps2_boot_printf("[3/3] Application reached.\n");
+	ps2_boot_printf("Path: %s\n", cwd);
+	ps2_boot_printf("Checking embedded game data...\n");
 	if (!ps2_embedded_directory_exists("data/PRINCE")) {
 		ps2_boot_fatal("Embedded game resources are missing or corrupt.");
 	}
+	ps2_boot_printf("Selecting save storage...\n");
 	if (!ps2_storage_init()) {
 		ps2_boot_fatal("Cannot write to USB or memory card slot 1.");
 	}
@@ -105,7 +124,9 @@ int main(int argc, char *argv[])
 	ps2_boot_log("main: cwd=%s argv0=%s", cwd, argc > 0 && argv[0] != NULL ? argv[0] : "(none)");
 	ps2_boot_log("main: embedded assets=%u bytes storage=%s",
 		(unsigned int)ps2_embedded_asset_blob_size, ps2_storage_root());
-	scr_printf("Game data ready.\nSave storage: %s\nStarting SDL...\n", ps2_storage_root());
+	ps2_boot_printf("Game data ready.\n");
+	ps2_boot_printf("Save storage: %s\n", ps2_storage_root());
+	ps2_boot_printf("Starting SDL...\n");
 #endif
 	pop_main();
 	return 0;

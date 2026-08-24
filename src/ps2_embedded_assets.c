@@ -83,11 +83,13 @@ static bool probe_storage_root(const char* device, const char* directory) {
 
 bool ps2_storage_init(void) {
 	if (ps2_selected_storage[0] != '\0') return true;
-	// USB devices can need a moment after the IOP reset. A bounded retry keeps
-	// SMB/HDD launches responsive when no flash drive is connected.
-	for (int attempt = 0; attempt < 20; ++attempt) {
+	// SDL2main has already mounted the device drivers by the time SDL_main is
+	// reached. Give a connected USB drive a short grace period, but do not make
+	// SMB/HDD launches wait seconds before falling back to the memory card.
+	const int usb_probe_attempts = 4;
+	for (int attempt = 0; attempt < usb_probe_attempts; ++attempt) {
 		if (probe_storage_root("mass:/", "mass:/SDLPoP-PS2")) return true;
-		DelayThread(100000);
+		if (attempt + 1 < usb_probe_attempts) DelayThread(50000);
 	}
 	if (probe_storage_root("mc0:/", "mc0:/SDLPoP-PS2")) return true;
 	return false;
