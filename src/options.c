@@ -835,6 +835,15 @@ void load_mod_options() {
 			levelset_name[0] = '\0';
 		}
 	}
+	#ifdef __PS2__
+	// The embedded stock PS2 data has no playable level 0. Recover old or
+	// damaged settings before custom becomes the active options structure, so a
+	// saved first_level=0 cannot hang the game before the menu can be reopened.
+	if (custom_saved.first_level < 1 || custom_saved.first_level > 15) {
+		custom_saved.first_level = 1;
+		ps2_boot_log("load_mod_options: invalid first_level reset to 1");
+	}
+	#endif
 	turn_fixes_and_enhancements_on_off(use_fixes_and_enhancements);
 	turn_custom_options_on_off(use_custom_options);
 }

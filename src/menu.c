@@ -844,10 +844,10 @@ setting_type mods_settings[] = {
 				.explanation = "Enable the dungeon wall drawing algorithm in the palace."
 						"\nN.B. Use with a modified VPALACE.DAT that provides dungeon-like wall graphics! (default = OFF)"},
 		{.id = SETTING_FIRST_LEVEL, .style = SETTING_STYLE_NUMBER, .required = &use_custom_options,
-				.linked = &custom_saved.first_level, .number_type = SETTING_WORD, .max = 15,
+				.linked = &custom_saved.first_level, .number_type = SETTING_WORD, .min = 1, .max = 15,
 				.text = "First level",
 				.explanation = "Level that will be loaded when starting a new game."
-						"\n(default = 1)"},
+						"\n(valid range = 1-15; default = 1)"},
 		{.id = SETTING_SKIP_TITLE, .style = SETTING_STYLE_TOGGLE, .required = &use_custom_options,
 				.linked = &custom_saved.skip_title,
 				.text = "Skip title sequence",
