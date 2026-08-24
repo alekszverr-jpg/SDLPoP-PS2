@@ -81,6 +81,9 @@ enum pause_menu_item_ids {
 	PAUSE_MENU_LOAD_GAME,
 	PAUSE_MENU_RESTART_LEVEL,
 	PAUSE_MENU_SETTINGS,
+	#ifdef __PS2__
+	PAUSE_MENU_HALL_OF_FAME,
+	#endif
 	PAUSE_MENU_RESTART_GAME,
 	PAUSE_MENU_QUIT_GAME,
 	SETTINGS_MENU_GENERAL,
@@ -109,6 +112,9 @@ pause_menu_item_type pause_menu_items[] = {
 #endif
 		{.id = PAUSE_MENU_RESTART_LEVEL, .text = "RESTART LEVEL"},
 		{.id = PAUSE_MENU_SETTINGS,      .text = "SETTINGS"},
+	#ifdef __PS2__
+		{.id = PAUSE_MENU_HALL_OF_FAME,  .text = "HALL OF FAME"},
+	#endif
 		{.id = PAUSE_MENU_RESTART_GAME,  .text = "RESTART GAME"},
 		{.id = PAUSE_MENU_QUIT_GAME,     .text = "QUIT GAME"},
 };
@@ -129,6 +135,9 @@ enum menu_dialog_ids {
 	DIALOG_CONFIRM_QUIT,
 	DIALOG_SELECT_LEVEL,
 	DIALOG_CONFIRM_480P,
+	#ifdef __PS2__
+	DIALOG_HALL_OF_FAME,
+	#endif
 };
 
 pause_menu_item_type settings_menu_items[] = {
@@ -1498,6 +1507,11 @@ void pause_menu_clicked(pause_menu_item_type* item) {
 			active_settings_subsection = 0;
 			controlled_area = 0;
 			break;
+		#ifdef __PS2__
+		case PAUSE_MENU_HALL_OF_FAME:
+			current_dialog_box = DIALOG_HALL_OF_FAME;
+			break;
+		#endif
 		case PAUSE_MENU_RESTART_GAME:
 			last_key_scancode = SDL_SCANCODE_R | WITH_CTRL;
 			break;
@@ -2403,6 +2417,46 @@ void draw_select_level_dialog(void) {
 
 int need_full_menu_redraw_count;
 
+#ifdef __PS2__
+void draw_hall_of_fame_dialog(void) {
+	font_type* saved_font = textstate.ptr_font;
+	rgb_type saved_palette[COUNT(palette)];
+	memcpy(saved_palette, palette, sizeof(saved_palette));
+
+	textstate.ptr_font = &hc_font;
+	load_title_images(0);
+	uint32_t clear_color = SDL_MapRGBA(overlay_surface->format, 0, 0, 0, 255);
+	SDL_FillRect(overlay_surface, NULL, clear_color);
+	draw_full_image(STORY_FRAME);
+	draw_full_image(HOF_POP);
+	show_hof();
+
+	if (hof_count == 0) {
+		rect_type empty_rect = {92, 72, 116, 248};
+		show_hof_text(&empty_rect, halign_center, valign_middle, "NO RECORDS YET");
+	}
+	rect_type controls_rect = {178, 32, 194, 288};
+	show_hof_text(&controls_rect, halign_center, valign_middle, "CROSS OR CIRCLE: RETURN");
+	update_screen();
+
+	clear_menu_controls();
+	clear_kbd_buf();
+	for (;;) {
+		process_events();
+		key_test_paused_menu(key_test_quit());
+		process_additional_menu_input();
+		if (menu_control_back == 1 || pressed_enter) break;
+		SDL_Delay(1);
+	}
+
+	release_title_images();
+	memcpy(palette, saved_palette, sizeof(saved_palette));
+	textstate.ptr_font = saved_font;
+	clear_menu_controls();
+	need_full_menu_redraw_count = 2;
+}
+#endif
+
 void draw_menu() {
 	escape_key_suppressed = (key_states[SDL_SCANCODE_BACKSPACE] & KEYSTATE_HELD || key_states[SDL_SCANCODE_ESCAPE] & KEYSTATE_HELD);
 	surface_type* saved_target_surface = current_target_surface;
@@ -2420,6 +2474,10 @@ void draw_menu() {
 		if (current_dialog_box != DIALOG_NONE) {
 			if (current_dialog_box == DIALOG_SELECT_LEVEL) {
 				draw_select_level_dialog();
+			#ifdef __PS2__
+			} else if (current_dialog_box == DIALOG_HALL_OF_FAME) {
+				draw_hall_of_fame_dialog();
+			#endif
 			} else {
 				draw_confirmation_dialog(current_dialog_box, current_dialog_text);
 			}
