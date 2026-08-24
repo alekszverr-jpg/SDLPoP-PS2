@@ -1753,18 +1753,18 @@ void draw_image_with_blending(image_type* image, int xpos, int ypos) {
 
 #define print_setting_value(setting, value) print_setting_value_(setting, value, alloca(32), 32)
 char* print_setting_value_(setting_type* setting, int value, char* buffer, size_t buffer_size) {
+	if (buffer_size == 0) return buffer;
 	bool has_name = false;
 	names_list_type* list = setting->names_list;
-	size_t max_len = MIN(MAX_OPTION_VALUE_NAME_LENGTH, buffer_size);
 	if (list != NULL) {
 		if (list->type == 0 && value >= 0 && value < list->names.count) {
-			strncpy(buffer, (*(list->names.data))[value], max_len);
+			snprintf(buffer, buffer_size, "%s", (*(list->names.data))[value]);
 			has_name = true;
 		} else if (list->type == 1) {
 			for (int i = 0; i < list->kv_pairs.count; ++i) {
 				key_value_type* kv_pair = list->kv_pairs.data + i;
 				if (value == kv_pair->value) {
-					strncpy(buffer, kv_pair->key, max_len);
+					snprintf(buffer, buffer_size, "%s", kv_pair->key);
 					has_name = true;
 					break;
 				}
@@ -2024,20 +2024,17 @@ void draw_settings_area(settings_area_type* settings_area) {
 
 	int y_offset = start_y_offset;
 	int num_drawn_settings = 0;
-	for (int i = 0; (i < settings_area->setting_count) && (num_drawn_settings < 9); ++i) {
-		if (i >= scroll_position) {
-			++num_drawn_settings;
-			draw_setting(&settings_area->settings[i], &settings_area_rect, &y_offset, color_15_brightwhite);
-		}
+	int first_visible_setting = MIN(MAX(0, scroll_position), MAX(0, settings_area->setting_count - 1));
+	for (int i = first_visible_setting; (i < settings_area->setting_count) && (num_drawn_settings < 9); ++i) {
+		++num_drawn_settings;
+		draw_setting(&settings_area->settings[i], &settings_area_rect, &y_offset, color_15_brightwhite);
 	}
 
 	y_offset = start_y_offset;
 	num_drawn_settings = 0;
-	for (int i = 0; (i < settings_area->setting_count) && (num_drawn_settings < 9); ++i) {
-		if (i >= scroll_position) {
-			++num_drawn_settings;
-			handle_setting(&settings_area->settings[i], &settings_area_rect, &y_offset, color_15_brightwhite);
-		}
+	for (int i = first_visible_setting; (i < settings_area->setting_count) && (num_drawn_settings < 9); ++i) {
+		++num_drawn_settings;
+		handle_setting(&settings_area->settings[i], &settings_area_rect, &y_offset, color_15_brightwhite);
 	}
 
 	if (scroll_position > 0) {
@@ -2088,14 +2085,16 @@ void draw_settings_menu(void) {
 			if (old_hovering_item_id != hovering_pause_menu_item) {
 				hovering_item_changed = true;
 			}
-		} else if (controlled_area == 1) {
+		} else if (controlled_area == 1 && settings_area != NULL && settings_area->setting_count > 0) {
 			// settings area
 			int old_highlighted_setting_id = highlighted_setting_id;
 
 			// Why does the global variable contain the ID instead of the index?...
 			// Find the index from the ID.
-			settings_area_type* current_settings_area = get_settings_area(active_settings_subsection);
-			int highlighted_setting_index = -1;
+			settings_area_type* current_settings_area = settings_area;
+			// If a subsection changes while input is being repeated, recover to its
+			// first row instead of indexing the array with -1.
+			int highlighted_setting_index = 0;
 			for (int i = 0; i < current_settings_area->setting_count; i++) {
 				if (highlighted_setting_id == current_settings_area->settings[i].id) {
 					highlighted_setting_index = i;

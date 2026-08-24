@@ -2275,11 +2275,12 @@ void ps2_play_menu_click(int sound_id) {
 	init_digi();
 	if (digi_unavailable || digi_audiospec == NULL || !is_sound_on) return;
 
-	// Do not lock or repeatedly resume SDL for each D-pad repeat. The callback
-	// atomically consumes the latest request without disturbing audsrv timing.
+	// Do not call any SDL audio-device API from repeated menu input. Even status
+	// queries can contend with the PS2 backend while its callback owns audsrv.
+	// The device is started by normal game audio; this path only publishes the
+	// newest click request for the callback to consume atomically.
 	ps2_menu_click_requested_at = SDL_GetTicks();
 	SDL_AtomicSet(&ps2_menu_click_request, sound_id + 1);
-	if (SDL_GetAudioStatus() != SDL_AUDIO_PLAYING) SDL_PauseAudio(0);
 }
 
 static void ps2_mix_menu_click(Uint8* stream, int len) {
@@ -2543,6 +2544,9 @@ void init_digi() {
 		desired->freq, desired->channels, desired->samples,
 		obtained->freq, obtained->channels, obtained->samples, obtained->format);
 	free(desired);
+	// Start the device once. Menu navigation only posts atomic click requests
+	// and must never touch the PS2 audio backend during D-pad auto-repeat.
+	SDL_PauseAudio(0);
 	#else
 	digi_audiospec = desired;
 	#endif
