@@ -2537,7 +2537,11 @@ const char* get_writable_file_path(char* custom_path_buffer, size_t max_len, con
 	#endif
 #endif
 
+	#if defined WIN32 || _WIN32 || WIN64 || _WIN64
 	if (save_path != NULL && save_path[0] != '\0') {
+	#else
+	if (save_path[0] != '\0') {
+	#endif
 #if defined WIN32 || _WIN32 || WIN64 || _WIN64
 		mkdir (save_path);
 #else

@@ -448,6 +448,7 @@ int pop_wait(int timer_index,int time) {
 	return do_wait(timer_index);
 }
 
+#ifndef __PS2__
 static FILE* open_dat_from_root_or_data_dir(const char* filename) {
 	FILE* fp = NULL;
 	fp = fopen(filename, "rb");
@@ -470,6 +471,7 @@ static FILE* open_dat_from_root_or_data_dir(const char* filename) {
 	}
 	return fp;
 }
+#endif
 
 int showmessage(char* text,int arg_4,void* arg_0);
 
