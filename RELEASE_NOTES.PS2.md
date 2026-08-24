@@ -1,4 +1,4 @@
-# Prince of Persia for PlayStation 2 — release candidate
+# Prince of Persia for PlayStation 2 — v1.0.0
 
 This is a native PlayStation 2 port of SDLPoP 1.24 RC. It runs directly on
 the console and does not use DOS emulation.

@@ -109,5 +109,5 @@ the pause-menu viewer have also been verified on a real console. When left
 unattended after the Hall of Fame screen, the PS2 port restarts the title loop
 instead of entering the original unstable level 0 demonstration. Accepted
 480p output on a compatible display remains the only explicit hardware
-smoke-test item. The complete release-candidate matrix is tracked in
+smoke-test item. The complete release test matrix is tracked in
 `RELEASE_CHECKLIST.PS2.md`.
