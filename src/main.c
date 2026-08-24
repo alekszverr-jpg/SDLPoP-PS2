@@ -35,7 +35,7 @@ The authors of this program may be contacted at https://forum.princed.org
 // even if the real console stalls before SDL_main is reached.
 void reset_IOP(void) {
 	init_scr();
-	scr_printf("SDLPoP PS2 diagnostic boot\n\n");
+	scr_printf("Prince of Persia for PlayStation 2\n\n");
 	scr_printf("[1/3] Resetting IOP...\n");
 	SifInitRpc(0);
 	while (!SifIopReset(NULL, 0)) {
@@ -110,7 +110,6 @@ int main(int argc, char *argv[])
 	ps2_boot_log("main: cwd=%s argv0=%s", cwd, argc > 0 && argv[0] != NULL ? argv[0] : "(none)");
 	ps2_boot_log("main: data/PRINCE ready after %d ms", data_wait_attempts * 100);
 	scr_printf("\nGame data found after %d ms.\nStarting SDL...\n", data_wait_attempts * 100);
-	DelayThread(2000000);
 #endif
 	pop_main();
 	return 0;

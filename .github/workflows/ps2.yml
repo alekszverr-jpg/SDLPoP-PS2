@@ -96,7 +96,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist/SDLPoP-PS2
-          cp BOOT.ELF SDLPoP.ini README.PS2.md dist/SDLPoP-PS2/
+          cp BOOT.ELF SDLPoP.ini README.PS2.md COPYING dist/SDLPoP-PS2/
           cp -R data dist/SDLPoP-PS2/data
           (cd dist && cmake -E tar cf SDLPoP-PS2.zip --format=zip SDLPoP-PS2)
 
