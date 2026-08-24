@@ -3,16 +3,16 @@
 ## Automated
 
 - [x] Cross-compile with the pinned PS2DEV toolchain in GitHub Actions.
-- [x] Embed every file from `data` and the base INI in `BOOT.ELF`.
+- [x] Embed every file from `data` and the base INI in `PRINCE.ELF`.
 - [x] Reject a release ZIP containing an external `data` directory or INI.
-- [x] Generate and verify `BOOT.ELF.sha256`.
+- [x] Generate and verify `PRINCE.ELF.sha256`.
 - [x] Package OPL `title.cfg`, documentation and GPL license text.
 
 ## Confirmed on real PlayStation 2
 
 - [x] Boot and gameplay in 240p.
 - [x] Self-contained ELF starts without an external `data` directory.
-- [x] `BOOT.ELF` starts from the OPL Apps menu over SMB.
+- [x] `PRINCE.ELF` starts from the OPL Apps menu over SMB.
 - [x] DualShock 2 input, including the corrected R1 action mapping.
 - [x] Screen size and position calibration.
 - [x] Game saves and quicksave/quickload.

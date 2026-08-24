@@ -8,12 +8,12 @@ Actions; a local PS2SDK installation is not required.
 
 Open the **Build PlayStation 2** workflow in GitHub Actions and run it, or push
 a commit. Download the `SDLPoP-PS2` artifact when the job finishes. It contains
-`SDLPoP-PS2.zip`, a standalone `BOOT.ELF` and its SHA-256 checksum.
+`SDLPoP-PS2.zip`, a standalone `PRINCE.ELF` and its SHA-256 checksum.
 
 ## Run
 
-`BOOT.ELF` contains all game resources and does not need an external `data`
-directory or `SDLPoP.ini`. Start it with wLaunchELF, or place `BOOT.ELF` and
+`PRINCE.ELF` contains all game resources and does not need an external `data`
+directory or `SDLPoP.ini`. Start it with wLaunchELF, or place `PRINCE.ELF` and
 `title.cfg` together under OPL's `APPS/SDLPoP-PS2` directory. This also allows
 OPL to load the application itself from an SMB share.
 

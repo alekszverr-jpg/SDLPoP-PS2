@@ -145,11 +145,11 @@ endif()
 
 if(PS2)
     # SDL2main supplies the PS2 startup wrapper which resets the IOP and
-    # mounts the device from which BOOT.ELF was launched.
+    # mounts the device from which PRINCE.ELF was launched.
     find_package(SDL2 CONFIG REQUIRED)
     find_package(SDL2_image CONFIG REQUIRED)
     target_include_directories(prince PRIVATE "${CMAKE_SOURCE_DIR}")
-    set_target_properties(prince PROPERTIES OUTPUT_NAME "BOOT" SUFFIX ".ELF")
+    set_target_properties(prince PROPERTIES OUTPUT_NAME "PRINCE" SUFFIX ".ELF")
     # Software OPL synthesis runs in SDL's real-time audio thread. Optimize it
     # aggressively so the EE can keep the audsrv ring buffer filled.
     target_compile_options(prince PRIVATE -O3 -G0)

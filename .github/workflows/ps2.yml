@@ -92,27 +92,27 @@ jobs:
             -DCMAKE_PREFIX_PATH="$PS2SDK/ports" \
             -DSDLPOP_BUILD_ID="${GITHUB_SHA::7}"
           cmake --build build-ps2 --parallel 2
-          test -s BOOT.ELF
+          test -s PRINCE.ELF
 
       - name: Package PS2 release
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist/SDLPoP-PS2
-          cp BOOT.ELF title.cfg README.PS2.md COPYING dist/SDLPoP-PS2/
-          (cd dist/SDLPoP-PS2 && sha256sum BOOT.ELF > BOOT.ELF.sha256)
+          cp PRINCE.ELF title.cfg README.PS2.md COPYING dist/SDLPoP-PS2/
+          (cd dist/SDLPoP-PS2 && sha256sum PRINCE.ELF > PRINCE.ELF.sha256)
           (cd dist && cmake -E tar cf SDLPoP-PS2.zip --format=zip SDLPoP-PS2)
 
       - name: Verify self-contained PS2 package
         shell: bash
         run: |
           set -euo pipefail
-          grep --text --quiet 'data/PRINCE/res1.bin' BOOT.ELF
+          grep --text --quiet 'data/PRINCE/res1.bin' PRINCE.ELF
           test "$(find dist/SDLPoP-PS2 -maxdepth 1 -type f | wc -l)" -eq 5
           test ! -e dist/SDLPoP-PS2/data
           test ! -e dist/SDLPoP-PS2/SDLPoP.ini
-          (cd dist/SDLPoP-PS2 && sha256sum --check BOOT.ELF.sha256)
-          cmake -E tar tf dist/SDLPoP-PS2.zip | grep 'SDLPoP-PS2/BOOT.ELF' > /dev/null
+          (cd dist/SDLPoP-PS2 && sha256sum --check PRINCE.ELF.sha256)
+          cmake -E tar tf dist/SDLPoP-PS2.zip | grep 'SDLPoP-PS2/PRINCE.ELF' > /dev/null
           if cmake -E tar tf dist/SDLPoP-PS2.zip | grep --extended-regexp '/(data/|SDLPoP.ini$)' > /dev/null; then
             exit 1
           fi
@@ -123,6 +123,6 @@ jobs:
           name: SDLPoP-PS2
           path: |
             dist/SDLPoP-PS2.zip
-            dist/SDLPoP-PS2/BOOT.ELF
-            dist/SDLPoP-PS2/BOOT.ELF.sha256
+            dist/SDLPoP-PS2/PRINCE.ELF
+            dist/SDLPoP-PS2/PRINCE.ELF.sha256
           if-no-files-found: error

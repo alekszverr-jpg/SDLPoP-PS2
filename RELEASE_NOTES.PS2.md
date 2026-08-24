@@ -5,7 +5,7 @@ the console and does not use DOS emulation.
 
 ## Highlights
 
-- A self-contained `BOOT.ELF` with all original game resources embedded.
+- A self-contained `PRINCE.ELF` with all original game resources embedded.
 - Launch through wLaunchELF or the OPL Apps menu, including an ELF stored on
   an SMB share.
 - Safe 240p boot for standard-definition CRT televisions.
@@ -29,16 +29,16 @@ video calibration and `SDLPoP-PS2.log`.
 
 ## Installation
 
-For wLaunchELF, copy and start `BOOT.ELF`. No `data` directory or INI file is
+For wLaunchELF, copy and start `PRINCE.ELF`. No `data` directory or INI file is
 required.
 
-For OPL, copy `BOOT.ELF` and `title.cfg` into:
+For OPL, copy `PRINCE.ELF` and `title.cfg` into:
 
 ```text
 APPS/SDLPoP-PS2/
 ```
 
-The release ZIP also includes `BOOT.ELF.sha256` for integrity verification.
+The release ZIP also includes `PRINCE.ELF.sha256` for integrity verification.
 
 ## Known limitations
 
